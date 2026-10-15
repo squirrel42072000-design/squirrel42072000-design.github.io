@@ -1,10 +1,13 @@
 /* Rootling service worker — offline app shell.
- * Strategy: precache the shell files that ship with the app, then
- * cache-first for same-origin GETs (runtime-caching any same-origin asset
- * that loads successfully, e.g. the plant + creature SVG sets). Bump
- * CACHE_VERSION on every release that changes shell files.
+ * Strategy: precache the shell files that ship with the app. Shell
+ * files and page loads are NETWORK-FIRST (a connected visit always
+ * gets the current shell; the cache is the offline fallback) — a
+ * cache-first shell once let a phone keep an out-of-date copy whose
+ * settings saved but never applied. Other same-origin GETs stay
+ * cache-first with runtime caching (e.g. the plant + creature SVG
+ * sets). Bump CACHE_VERSION on every release that changes shell files.
  */
-var CACHE_VERSION = 'rootling-v5';
+var CACHE_VERSION = 'rootling-v7';
 var APP_SHELL = [
   './',
   './index.html',
@@ -36,26 +39,47 @@ self.addEventListener('activate', function (event) {
   );
 });
 
+var SHELL_PATHS = {};
+APP_SHELL.forEach(function (p) {
+  try { SHELL_PATHS[new URL(p, self.location.href).pathname] = true; } catch (e) { /* ignore */ }
+});
+
 self.addEventListener('fetch', function (event) {
   var req = event.request;
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
   if (url.origin !== self.location.origin) return; /* app has no cross-origin deps */
 
+  function fetchAndCache() {
+    return fetch(req).then(function (res) {
+      if (res && res.ok) {
+        var copy = res.clone();
+        caches.open(CACHE_VERSION).then(function (cache) { cache.put(req, copy); });
+      }
+      return res;
+    });
+  }
+
+  /* Network-first for page loads and shell files: fresh code wins
+   * whenever the network is there; the cache keeps the app working
+   * offline. */
+  if (req.mode === 'navigate' || SHELL_PATHS[url.pathname]) {
+    event.respondWith(
+      fetchAndCache().catch(function () {
+        return caches.match(req, { ignoreSearch: true }).then(function (cached) {
+          if (cached) return cached;
+          if (req.mode === 'navigate') return caches.match('./index.html');
+          return Response.error();
+        });
+      })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(req, { ignoreSearch: true }).then(function (cached) {
       if (cached) return cached;
-      return fetch(req).then(function (res) {
-        if (res && res.ok) {
-          var copy = res.clone();
-          caches.open(CACHE_VERSION).then(function (cache) { cache.put(req, copy); });
-        }
-        return res;
-      }).catch(function () {
-        /* Offline and not cached: for navigations, fall back to the shell. */
-        if (req.mode === 'navigate') return caches.match('./index.html');
-        return Response.error();
-      });
+      return fetchAndCache().catch(function () { return Response.error(); });
     })
   );
 });

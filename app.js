@@ -2608,6 +2608,10 @@
     }
     function scrollToEl(elm) {
       if (!elm) return;
+      /* Layout pass: switch to the target's view before scrolling. */
+      if (typeof window !== 'undefined' && window.RootlingNav && window.RootlingNav.reveal) {
+        try { window.RootlingNav.reveal(elm); return; } catch (e) { /* fall through to a plain scroll */ }
+      }
       try { if (typeof elm.scrollIntoView === 'function') elm.scrollIntoView({ block: 'start' }); } catch (e) { /* scrolling is a help, never a need */ }
     }
 
@@ -3954,6 +3958,10 @@
 
     /* ---------- Safety view + trusted people ---------- */
     function scrollToEl(el) {
+      /* Layout pass: switch to the target's view before scrolling. */
+      if (el && typeof window !== 'undefined' && window.RootlingNav && window.RootlingNav.reveal) {
+        try { window.RootlingNav.reveal(el); return; } catch (e) { /* fall through to a plain scroll */ }
+      }
       try { if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView(); } catch (e) { /* scrolling is a help, never a need */ }
     }
     function openSafety(fromDistress) {
@@ -3976,7 +3984,7 @@
       stopAlertFlow('The alert is stopped. No one was contacted.');
       var view = $('safety-view');
       if (view) view.hidden = true;
-      scrollToEl($('well-safety-bar'));
+      scrollToEl($('well-safety-open')); /* the opener row replaced the old bar (2026-10-15) */
     }
     function goGrounding(breathing) {
       var card = $('grounding-card');
@@ -4599,7 +4607,11 @@
     }
 
     function initWell() {
-      if (!$('well-dayplan-card')) return;
+      /* 2026-10-15 restructure: the tool cards moved into the Train Me
+       * hub, so this module now keys on the safety view, which stays.
+       * bindSafety() still runs first; every card bind/render below is
+       * null-guarded and simply finds nothing to attach to. */
+      if (!$('safety-view')) return;
       bindSafety();
       bindToggles();
       bindDayPlan();
@@ -6293,7 +6305,7 @@
       var panel = $('time-complete-panel');
       if (panel) {
         panel.hidden = false;
-        try { panel.scrollIntoView({ block: 'nearest' }); } catch (e) { /* scrolling is a help, not a need */ }
+        try { if (typeof window !== 'undefined' && window.RootlingNav && window.RootlingNav.reveal) window.RootlingNav.reveal(panel); else panel.scrollIntoView({ block: 'nearest' }); } catch (e) { /* scrolling is a help, not a need */ }
       }
     }
     function answerCheck(answer) {
@@ -6436,7 +6448,7 @@
         renderSummaries();
         say('time-suggest-status', 'Good. Pick your energy just below, and Rootling will show one idea.');
         var anchor = $('time-energy-group') || $('time-view');
-        if (anchor) { try { anchor.scrollIntoView({ block: 'nearest' }); } catch (e) { /* fine */ } }
+        if (anchor) { try { if (typeof window !== 'undefined' && window.RootlingNav && window.RootlingNav.reveal) window.RootlingNav.reveal(anchor); else anchor.scrollIntoView({ block: 'nearest' }); } catch (e) { /* fine */ } }
       });
       if ($('time-reminder-later')) $('time-reminder-later').addEventListener('click', function () {
         hideReminderCard();
@@ -6481,7 +6493,7 @@
         var card = $('grounding-card');
         if (card) {
           card.hidden = false;
-          try { card.scrollIntoView({ block: 'nearest' }); } catch (e) { /* fine */ }
+          try { if (typeof window !== 'undefined' && window.RootlingNav && window.RootlingNav.reveal) window.RootlingNav.reveal(card); else card.scrollIntoView({ block: 'nearest' }); } catch (e) { /* fine */ }
         }
       });
       if ($('time-hard-link')) $('time-hard-link').addEventListener('click', function () {
@@ -6731,7 +6743,13 @@
     var uidN = 0;
     function uid(prefix) { uidN += 1; return prefix + '-' + Date.now().toString(36) + '-' + uidN + '-' + Math.floor(Math.random() * 100000); }
     function say(id, text) { var el = $(id); if (el) el.textContent = text; }
-    function scrollToEl(el) { if (el && el.scrollIntoView) { try { el.scrollIntoView(); } catch (e) { /* fine */ } } }
+    function scrollToEl(el) {
+      /* Layout pass: switch to the target's view before scrolling. */
+      if (el && typeof window !== 'undefined' && window.RootlingNav && window.RootlingNav.reveal) {
+        try { window.RootlingNav.reveal(el); return; } catch (e) { /* fall through to a plain scroll */ }
+      }
+      if (el && el.scrollIntoView) { try { el.scrollIntoView(); } catch (e) { /* fine */ } }
+    }
 
     /* ---------- own store ---------- */
     function mbDefaults() { return { version: 1, personality: 'Friendly', about: [], keepsakes: [], kept: [], index: [] }; }
@@ -7497,6 +7515,731 @@
     if (typeof document !== 'undefined') {
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initMemory);
       else initMemory();
+    }
+  })();
+
+  /* ==== Train Me hub (worker module, 2026-10-15) ====
+   * Daniel's restructure: the long form cards (Day Plan, Routines, Name
+   * the Feeling, Park a Worry, Journal, Unsent Letters, Sensory
+   * Check-in, Word Mute), the Social Coach notebook + Brave Moments, and
+   * the memory-book About-you form became ONE chat-style hub in the
+   * Companion tab. The pet asks ONE small question at a time. Each answer
+   * writes the SAME store key with the SAME value shape the old form
+   * wrote — no data-format change:
+   *   rootling-well-v1:       dayPlan, floorItems[], routines[],
+   *                           journal[] (feelings land here too),
+   *                           worries[], unsent[], sensory[], mutedWords[]
+   *   rootling-social-v1:     reflections[], brave[]
+   *   rootling-memorybook-v1: about[] + index[] (addAbout's exact shape)
+   * After a well write, the wellbeing module is reloaded so its own
+   * in-memory copy can never overwrite a Train Me answer later. Saved
+   * words stay viewable below as plain lists, on request. Skipping is
+   * always fine: no points lost, no sad pet, nothing is forced. */
+  (function () {
+    'use strict';
+    var WELL_KEY = 'rootling-well-v1';
+    var SOCIAL_KEY = 'rootling-social-v1';
+    var MB_KEY = 'rootling-memorybook-v1';
+    var FEELINGS = [
+      ['happy', 'Happy'], ['calm', 'Calm'], ['tired', 'Tired'], ['sad', 'Sad'],
+      ['angry', 'Angry'], ['worried', 'Worried'], ['overwhelmed', 'Overwhelmed'],
+      ['numb', 'Numb'], ['hopeful', 'Hopeful'], ['frustrated', 'Frustrated'],
+      ['lonely', 'Lonely'], ['proud', 'Proud']
+    ];
+    /* The same phrases the wellbeing module watches for in journal text. */
+    var DISTRESS_PHRASES = ['kill myself', 'hurt myself', 'harm myself', 'end my life',
+      'want to die', 'suicidal', 'suicide', 'self-harm', 'self harm',
+      'no reason to live', 'better off dead'];
+    var ABOUT_WHY = {
+      name: 'So your pet can use the name you like.',
+      pronouns: 'So your pet can use your words for you.',
+      interest: 'So your pet can pick things you like.',
+      reward: 'So your pet knows what cheers you up.'
+    };
+    var ABOUT_LABEL = {
+      name: 'Name you like to be called', pronouns: 'Pronouns',
+      interest: 'A thing you like doing', reward: 'What cheers you up'
+    };
+    var distressNotes = {}; /* this visit only; nothing about this is saved */
+
+    function $(id) { return document.getElementById(id); }
+    function esc(s) {
+      return String(s === null || s === undefined ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function lsGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+    function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* storage off */ } }
+    function parseJson(raw) { try { return raw ? JSON.parse(raw) : null; } catch (e) { return null; } }
+    function dayKey(d) {
+      d = d || new Date();
+      function p(n) { return String(n).length < 2 ? '0' + n : String(n); }
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    }
+    var uidN = 0;
+    function uid(p) {
+      uidN += 1;
+      return p + '-' + Date.now().toString(36) + '-' + uidN + '-' + Math.floor(Math.random() * 1e9).toString(36);
+    }
+    function wellDefaults() {
+      return {
+        version: 1, dayPlan: 'regular', floorItems: ['Open Rootling'],
+        routines: [], worryTime: '', worries: [], journal: [], unsent: [],
+        mutedWords: [], sensory: [], contacts: [], alertsEnabled: false,
+        alertsConsent: false, alertContactId: '', userName: '',
+        locationEnabled: false, shareHistory: [], activeShare: null
+      };
+    }
+    function wellLoad() {
+      var w = parseJson(lsGet(WELL_KEY));
+      if (!w || typeof w !== 'object') return wellDefaults();
+      var base = wellDefaults();
+      for (var k in base) { if (w[k] === undefined) w[k] = base[k]; }
+      return w;
+    }
+    function wellSave(w) {
+      lsSet(WELL_KEY, JSON.stringify(w));
+      try { if (window.RootlingWell && window.RootlingWell.reload) window.RootlingWell.reload(); } catch (e) { /* module order */ }
+    }
+    function socLoad() {
+      var s = parseJson(lsGet(SOCIAL_KEY));
+      if (!s || typeof s !== 'object') s = {};
+      if (!Array.isArray(s.reflections)) s.reflections = [];
+      if (!Array.isArray(s.brave)) s.brave = [];
+      if (!Array.isArray(s.worksheets)) s.worksheets = [];
+      if (s.version === undefined) s.version = 1;
+      return s;
+    }
+    function socSave(s) {
+      lsSet(SOCIAL_KEY, JSON.stringify(s));
+      try { if (window.RootlingSocial && window.RootlingSocial.reload) window.RootlingSocial.reload(); } catch (e) { /* module order */ }
+    }
+    function textHasDistress(text) {
+      var low = ' ' + String(text || '').toLowerCase() + ' ';
+      for (var i = 0; i < DISTRESS_PHRASES.length; i++) if (low.indexOf(DISTRESS_PHRASES[i]) !== -1) return true;
+      return false;
+    }
+
+    /* ---------------- topics ---------------- */
+    var TOPICS = [
+      { id: 'dayplan', label: 'Day plan', kind: 'choice',
+        q: 'Is today a Regular day or a Low day?',
+        choices: [['regular', 'Regular day'], ['low', 'Low day']],
+        save: function (v) { var w = wellLoad(); w.dayPlan = v; wellSave(w); },
+        done: 'Saved. Your day plan is set.' },
+      { id: 'floor', label: 'Low day list', kind: 'text',
+        q: 'Name one small thing you can do on a Low day.',
+        save: function (t) { var w = wellLoad(); w.floorItems.push(t); wellSave(w); },
+        done: 'Saved. It is on your Low Day list.' },
+      { id: 'routine', label: 'Routines', kind: 'routine',
+        q: 'Would you like to build a quick routine? What is it called?',
+        done: 'Saved. Your routine is in your list.' },
+      { id: 'feelings', label: 'Feelings', kind: 'chips',
+        q: 'Tap the words that fit how you feel right now.',
+        save: function (words) {
+          var w = wellLoad();
+          w.journal.push({ id: uid('journal'), date: dayKey(), text: 'Feelings today: ' + words.join(', ') });
+          wellSave(w);
+        },
+        done: 'Saved. Your words are in your journal.' },
+      { id: 'worry', label: 'Park a worry', kind: 'text',
+        q: 'What is one worry on your mind today?',
+        save: function (t) {
+          var w = wellLoad();
+          w.worries.push({ id: uid('worry'), text: t, parkedAt: new Date().toISOString(), state: 'parked', note: '' });
+          wellSave(w);
+        },
+        done: 'Saved. Your worry is parked. You do not have to hold it in your head.' },
+      { id: 'journal', label: 'Journal', kind: 'text',
+        q: 'Write a few words about today. Small words are fine.',
+        save: function (t) {
+          var w = wellLoad();
+          var entry = { id: uid('journal'), date: dayKey(), text: t };
+          w.journal.push(entry);
+          if (textHasDistress(t)) distressNotes[entry.id] = true; /* this visit only */
+          wellSave(w);
+        },
+        done: 'Saved. Your words are in your journal.' },
+      { id: 'unsent', label: 'Unsent words', kind: 'text',
+        q: 'Write words you will not send. They stay here. No one sends them.',
+        save: function (t) {
+          var w = wellLoad();
+          w.unsent.push({ id: uid('unsent'), date: dayKey(), text: t, ready: false });
+          wellSave(w);
+        },
+        done: 'Saved. Your words are parked here.' },
+      { id: 'sensory', label: 'Senses', kind: 'text',
+        q: 'How do the sound and light around you feel right now?',
+        save: function (t) {
+          var w = wellLoad();
+          w.sensory.push({ id: uid('sensory'), date: dayKey(), words: [], note: t });
+          wellSave(w);
+        },
+        done: 'Saved. Your words are in your list.' },
+      { id: 'mute', label: 'Words to hide', kind: 'text',
+        q: 'Is there a word you do not want to see in this app?',
+        save: function (t) {
+          var w = wellLoad();
+          var word = t.toLowerCase();
+          if (w.mutedWords.indexOf(word) === -1) w.mutedWords.push(word);
+          wellSave(w);
+        },
+        done: 'Saved. That word is on your hide list.' },
+      { id: 'brave', label: 'Brave moments', kind: 'text',
+        q: 'Name one brave thing you did. Small counts.',
+        save: function (t) {
+          var s = socLoad();
+          s.brave.push({ id: uid('brave'), day: dayKey(), text: t });
+          socSave(s);
+        },
+        done: 'Saved. You did a brave thing. It counts.' },
+      { id: 'reflect', label: 'Hard talks', kind: 'text',
+        q: 'Think of a hard talk. What is one small thing you could do next time?',
+        save: function (t) {
+          var s = socLoad();
+          s.reflections.push({ id: uid('ref'), day: dayKey(), happened: '', confusing: '', well: '', next: t });
+          socSave(s);
+        },
+        done: 'Saved. Your note is in your list.' },
+      { id: 'about-name', label: 'Your name', kind: 'text',
+        q: 'What name do you like your pet to use for you?',
+        save: function (t) { saveAbout('name', t); },
+        done: 'Saved. Your pet will use that name.' },
+      { id: 'about-pronouns', label: 'Your words for you', kind: 'text',
+        q: 'What words for you should your pet use? Like she, he, or they.',
+        save: function (t) { saveAbout('pronouns', t); },
+        done: 'Saved. Your pet will use your words.' },
+      { id: 'about-interest', label: 'Things you like', kind: 'text',
+        q: 'Name one thing you like a lot.',
+        save: function (t) { saveAbout('interest', t); },
+        done: 'Saved. Your pet will keep it in mind.' },
+      { id: 'about-reward', label: 'What cheers you up', kind: 'text',
+        q: 'What cheers you up on a hard day?',
+        save: function (t) { saveAbout('reward', t); },
+        done: 'Saved. Your pet will keep it in mind.' }
+    ];
+    function saveAbout(kind, text) {
+      var s = parseJson(lsGet(MB_KEY));
+      if (!s || typeof s !== 'object') s = { version: 1, personality: 'Friendly', about: [], keepsakes: [], kept: [], index: [] };
+      if (!Array.isArray(s.about)) s.about = [];
+      if (!Array.isArray(s.index)) s.index = [];
+      if (kind === 'name' || kind === 'pronouns') {
+        s.about = s.about.filter(function (item) { return item.kind !== kind; });
+      }
+      var item = { id: uid('about'), kind: kind, text: text, why: ABOUT_WHY[kind], updated: dayKey(), importance: 4, scope: 'later' };
+      s.about.push(item);
+      s.index.push({ d: dayKey(), t: 'memory', ref: item.id });
+      lsSet(MB_KEY, JSON.stringify(s));
+      try { if (window.RootlingMemory && window.RootlingMemory.render) window.RootlingMemory.render(); } catch (e) { /* book re-renders on its own actions too */ }
+    }
+
+    /* ---------------- saved-word lists ---------------- */
+    var LISTS = [
+      { id: 'journal', label: 'Show my journal', title: 'My journal',
+        rows: function () {
+          return wellLoad().journal.slice().reverse().map(function (e) { return { main: e, html: esc(e.date) + ' — ' + esc(e.text) }; });
+        } },
+      { id: 'worries', label: 'Show my worries', title: 'My parked worries',
+        rows: function () {
+          return wellLoad().worries.slice().reverse().map(function (e) { return { html: esc(e.text) }; });
+        } },
+      { id: 'routines', label: 'Show my routines', title: 'My routines',
+        rows: function () {
+          return wellLoad().routines.slice().reverse().map(function (r) {
+            var steps = (r.steps || []).map(function (s) { return esc(s.text); }).join(' · ');
+            return { html: '<strong>' + esc(r.name) + '</strong>' + (steps ? '<br>' + steps : '') };
+          });
+        } },
+      { id: 'unsent', label: 'Show my unsent words', title: 'My unsent words',
+        rows: function () {
+          return wellLoad().unsent.slice().reverse().map(function (e) { return { html: esc(e.date) + ' — ' + esc(e.text) }; });
+        } },
+      { id: 'sensory', label: 'Show my sense notes', title: 'My sense notes',
+        rows: function () {
+          return wellLoad().sensory.slice().reverse().map(function (e) {
+            var words = (e.words || []).join(', ');
+            return { html: esc(e.date) + (words ? ' — ' + esc(words) : '') + (e.note ? '<br>' + esc(e.note) : '') };
+          });
+        } },
+      { id: 'brave', label: 'Show my brave moments', title: 'My brave moments',
+        rows: function () {
+          return socLoad().brave.slice().reverse().map(function (e) { return { html: esc(e.day) + ' — ' + esc(e.text) }; });
+        } },
+      { id: 'reflect', label: 'Show my talk notes', title: 'My talk notes',
+        rows: function () {
+          return socLoad().reflections.slice().reverse().map(function (e) {
+            var parts = [];
+            if (e.happened) parts.push('What happened: ' + esc(e.happened));
+            if (e.next) parts.push('Next time: ' + esc(e.next));
+            return { html: esc(e.day) + (parts.length ? '<br>' + parts.join('<br>') : '') };
+          });
+        } },
+      { id: 'about', label: 'Show about me', title: 'About me',
+        rows: function () {
+          var s = parseJson(lsGet(MB_KEY));
+          var about = (s && Array.isArray(s.about)) ? s.about : [];
+          return about.filter(function (i) { return i && i.text; }).map(function (i) {
+            return { html: esc(ABOUT_LABEL[i.kind] || 'About you') + ': ' + esc(i.text) };
+          });
+        } }
+    ];
+
+    /* ---------------- stage flow ---------------- */
+    var cur = -1;           /* index into TOPICS; -1 = done/stopped */
+    var routineDraft = null;
+    function say(msg) { var m = $('train-msg'); if (m) m.textContent = msg || ''; }
+    function topic() { return cur >= 0 && cur < TOPICS.length ? TOPICS[cur] : null; }
+
+    function renderStage() {
+      var q = $('train-q'), inputWrap = $('train-input-wrap'),
+          choices = $('train-choices'), save = $('train-save');
+      var t = topic();
+      if (!t) {
+        if (q) q.textContent = 'That is all for now. Come back any time.';
+        if (inputWrap) inputWrap.hidden = true;
+        if (choices) { choices.hidden = true; choices.innerHTML = ''; }
+        if (save) save.hidden = true;
+        var skip = $('train-skip'); if (skip) skip.hidden = true;
+        var later = $('train-later'); if (later) later.hidden = true;
+        return;
+      }
+      if (save) { save.hidden = false; save.textContent = t.kind === 'chips' ? 'Save these words' : 'Save my answer'; }
+      var skipB = $('train-skip'); if (skipB) skipB.hidden = false;
+      var laterB = $('train-later'); if (laterB) laterB.hidden = false;
+      if (q) q.textContent = t.q;
+      var ans = $('train-answer'); if (ans) ans.value = '';
+      if (t.kind === 'text' || t.kind === 'routine') {
+        if (inputWrap) inputWrap.hidden = false;
+        if (choices) { choices.hidden = true; choices.innerHTML = ''; }
+      } else {
+        if (inputWrap) inputWrap.hidden = true;
+        if (choices) {
+          choices.hidden = false;
+          choices.innerHTML = '';
+          if (t.kind === 'choice') {
+            t.choices.forEach(function (c) {
+              var b = document.createElement('button');
+              b.type = 'button'; b.className = 'btn btn-soft';
+              b.textContent = c[1]; b.setAttribute('data-train-choice', c[0]);
+              b.addEventListener('click', function () { pickChoice(c[0]); });
+              choices.appendChild(b);
+            });
+            if (save) save.hidden = true; /* a tap on a choice IS the answer */
+          } else if (t.kind === 'chips') {
+            FEELINGS.forEach(function (f) {
+              var b = document.createElement('button');
+              b.type = 'button'; b.className = 'btn btn-soft';
+              b.textContent = f[1]; b.setAttribute('data-train-chip', f[0]);
+              b.setAttribute('aria-pressed', 'false');
+              b.addEventListener('click', function () {
+                var on = !b.classList.contains('selected');
+                b.classList.toggle('selected', on);
+                b.setAttribute('aria-pressed', on ? 'true' : 'false');
+              });
+              choices.appendChild(b);
+            });
+          }
+        }
+      }
+      say('');
+    }
+    function advance() { cur += 1; routineDraft = null; renderStage(); }
+    function pickChoice(v) {
+      var t = topic(); if (!t) return;
+      t.save(v);
+      say(t.done);
+      cur += 1; renderStage(); say(t.done);
+    }
+    function onSave() {
+      var t = topic(); if (!t) return;
+      if (t.kind === 'choice') return; /* choices save on tap */
+      if (t.kind === 'chips') {
+        var picked = [];
+        var chips = $('train-choices') ? $('train-choices').querySelectorAll('[data-train-chip]') : [];
+        for (var i = 0; i < chips.length; i++) if (chips[i].classList.contains('selected')) picked.push(chips[i].getAttribute('data-train-chip'));
+        if (!picked.length) { say('Tap a word first. Or tap Skip. Both are fine.'); return; }
+        t.save(picked);
+        say(t.done); cur += 1; renderStage(); say(t.done);
+        return;
+      }
+      var ans = $('train-answer');
+      var text = ans ? ans.value.trim().slice(0, 1000) : '';
+      if (t.kind === 'routine') {
+        if (!routineDraft) {
+          if (!text) { say('Write a name first. Or tap Skip. Both are fine.'); return; }
+          routineDraft = { name: text, steps: [], pendingStep: null, phase: 'stepText' };
+          if ($('train-q')) $('train-q').textContent = 'What is step one? One short step is enough.';
+          if (ans) ans.value = '';
+          say('Good. Now add the steps, one at a time.');
+          return;
+        }
+        if (routineDraft.phase === 'stepLow') {
+          if (!text) { say('Write the Low Day way, or tap Skip if there is none.'); return; }
+          routineDraft.pendingStep.lowText = text;
+          routineDraft.steps.push(routineDraft.pendingStep);
+          routineDraft.pendingStep = null;
+          routineDraft.phase = 'stepText';
+          if (ans) ans.value = '';
+          if ($('train-q')) $('train-q').textContent = 'Saved. One more step? Write it here. Or tap Skip to finish your routine.';
+          say('Step saved.');
+          return;
+        }
+        if (!text) { say('Write one step first. Or tap Skip to finish your routine.'); return; }
+        routineDraft.pendingStep = { id: uid('step'), text: text, lowText: '' };
+        routineDraft.phase = 'stepLow';
+        if (ans) ans.value = '';
+        if ($('train-q')) $('train-q').textContent = 'What is the Low Day way to do that step? Tap Skip if there is none.';
+        say('Good step.');
+        return;
+      }
+      if (!text) { say('Write a few words first. Or tap Skip. Both are fine.'); return; }
+      t.save(text);
+      say(t.done); cur += 1; renderStage(); say(t.done);
+    }
+    function onSkip() {
+      var t = topic(); if (!t) return;
+      if (t.kind === 'routine' && routineDraft && routineDraft.phase === 'stepLow' && routineDraft.pendingStep) {
+        /* Skip at the Low Day question just means: no Low Day way. The
+         * step still counts; the routine is not finished yet. */
+        routineDraft.steps.push(routineDraft.pendingStep);
+        routineDraft.pendingStep = null;
+        routineDraft.phase = 'stepText';
+        var ans = $('train-answer'); if (ans) ans.value = '';
+        if ($('train-q')) $('train-q').textContent = 'Saved. One more step? Write it here. Or tap Skip to finish your routine.';
+        say('Step saved.');
+        return;
+      }
+      if (t.kind === 'routine' && routineDraft && routineDraft.steps.length) {
+        var w = wellLoad();
+        w.routines.push({ id: uid('routine'), name: routineDraft.name, steps: routineDraft.steps.slice() });
+        wellSave(w);
+        say(t.done); cur += 1; routineDraft = null; renderStage(); say(t.done);
+        return;
+      }
+      advance();
+    }
+    function onLater() {
+      cur = -1; routineDraft = null;
+      renderStage();
+      if ($('train-q')) $('train-q').textContent = 'Okay. We can stop here. Come back any time.';
+      say('');
+    }
+    function startTopic(id) {
+      for (var i = 0; i < TOPICS.length; i++) if (TOPICS[i].id === id) { cur = i; break; }
+      routineDraft = null;
+      renderStage();
+    }
+    function showList(id) {
+      var wrap = $('train-list-wrap'), list = $('train-list'), title = $('train-list-title');
+      var def = null;
+      for (var i = 0; i < LISTS.length; i++) if (LISTS[i].id === id) def = LISTS[i];
+      if (!def || !wrap || !list) return;
+      var rows = def.rows();
+      if (title) title.textContent = def.title;
+      list.innerHTML = rows.length
+        ? rows.map(function (r) { return '<li>' + r.html + '</li>'; }).join('')
+        : '<li>Nothing here yet. Your saved words will show here.</li>';
+      if (id === 'journal') wireDistressNotes(list);
+      wrap.hidden = false;
+    }
+    function wireDistressNotes(list) {
+      var journal = wellLoad().journal;
+      /* Rebuild with note rows right after flagged entries, same words
+       * and buttons the old journal card used. */
+      var html = '';
+      var items = journal.slice().reverse();
+      if (!items.length) { list.innerHTML = '<li>Nothing here yet. Your saved words will show here.</li>'; return; }
+      items.forEach(function (e) {
+        html += '<li>' + esc(e.date) + ' — ' + esc(e.text) + '</li>';
+        if (distressNotes[e.id]) {
+          html += '<li data-distress-note="' + esc(e.id) + '">If things feel like too much right now, support is here. '
+            + '<button type="button" class="btn btn-soft" data-distress-open="1">Open support</button> '
+            + '<button type="button" class="btn btn-ghost" data-distress-close="' + esc(e.id) + '">Close this note</button></li>';
+        }
+      });
+      list.innerHTML = html;
+      var openBtns = list.querySelectorAll('[data-distress-open]');
+      for (var i = 0; i < openBtns.length; i++) openBtns[i].addEventListener('click', function () {
+        try { if (window.RootlingWell && window.RootlingWell.openSafety) window.RootlingWell.openSafety(true); } catch (e) { /* safety view still one tab tap away */ }
+      });
+      var closeBtns = list.querySelectorAll('[data-distress-close]');
+      for (var j = 0; j < closeBtns.length; j++) closeBtns[j].addEventListener('click', function () {
+        delete distressNotes[this.getAttribute('data-distress-close')];
+        wireDistressNotes(list);
+        say('Note closed. Your entry is still here, just as you wrote it.');
+      });
+    }
+
+    function initTrain() {
+      if (!$('train-view')) return;
+      var topicsWrap = $('train-topics');
+      if (topicsWrap) {
+        TOPICS.forEach(function (t) {
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'btn btn-soft';
+          b.textContent = t.label; b.setAttribute('data-train-topic', t.id);
+          b.addEventListener('click', function () { startTopic(t.id); });
+          topicsWrap.appendChild(b);
+        });
+      }
+      var showWrap = $('train-show-btns');
+      if (showWrap) {
+        LISTS.forEach(function (l) {
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'btn btn-soft';
+          b.textContent = l.label; b.setAttribute('data-train-show', l.id);
+          b.addEventListener('click', function () { showList(l.id); });
+          showWrap.appendChild(b);
+        });
+      }
+      if ($('train-save')) $('train-save').addEventListener('click', onSave);
+      if ($('train-skip')) $('train-skip').addEventListener('click', onSkip);
+      if ($('train-later')) $('train-later').addEventListener('click', onLater);
+      cur = 0;
+      renderStage();
+      try {
+        window.RootlingTrain = {
+          topics: TOPICS.map(function (t) { return t.id; }),
+          startTopic: startTopic,
+          showList: showList
+        };
+      } catch (e) { /* export is a convenience only */ }
+    }
+    if (typeof document !== 'undefined') {
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initTrain);
+      else initTrain();
+    }
+  })();
+
+  /* ==== View manager — five tabs (layout pass, 2026-10-15) ====
+   * #main-view used to be one mega-page (~16 viewports of scrolling).
+   * Now its top-level sections belong to five tabs (Home, Focus,
+   * Activities, Companion, Settings & Support) and only the active tab
+   * shows, switched by the fixed bottom tab bar. Gating uses a CSS class
+   * (.view-gated), never the hidden attribute, so it composes with each
+   * section's own show/hide logic — either one hides the section. Ids,
+   * storage keys and data formats are unchanged. The footer (988
+   * support box) is never gated. #adopt-view, #quiet-view and the
+   * account gate live outside #main-view and are not touched.
+   * #privacy-view keeps its own behaviour: when opened it moves itself
+   * out of #main-view, so it is simply no longer a gated section until
+   * the page reloads. (Daniel's 2026-10-15 restructure set this tab map;
+   * the old wellbeing tool cards and the Social Coach card left the page
+   * and their work moved into the Train Me hub on the Companion tab.) */
+  (function () {
+    var VIEW_NAMES = { home: 1, focus: 1, activities: 1, companion: 1, support: 1 };
+    var VIEW_OF_ID = {
+      'help-panel': 'home', 'stuck-offer': 'home', 'today-card': 'home', 'preview-card': 'home',
+      'exec-view': 'focus', 'grounding-card': 'focus',
+      'time-view': 'activities', 'adventures-card': 'activities',
+      'companions-view': 'companion', 'change-main-confirm': 'companion', 'daily-gift': 'companion',
+      'train-view': 'companion',
+      'support-open-row': 'support', 'safety-view': 'support',
+      'companion-manage-card': 'support', 'account-card': 'support',
+      'notifications-card': 'support', 'learned-view': 'support',
+      'memory-book': 'support', 'privacy-view': 'support', 'memory-gate': 'support',
+      'changes-view': 'support', 'welcome-card': 'home'
+    };
+    var VIEW_OF_HEADING = {
+      'pet-heading': 'home', 'checkins-heading': 'home',
+      'settings-heading': 'support', 'settings-companion-heading': 'support',
+      'settings-words-heading': 'support', 'changes-heading': 'support'
+    };
+    var currentView = 'home';
+
+    function byId(id) { return document.getElementById(id); }
+    function mainView() { return byId('main-view'); }
+
+    /* Which view an element belongs to: itself or its nearest mapped
+     * ancestor inside #main-view. Returns null outside the views
+     * (header, footer, adopt/quiet views, the relocated privacy view's
+     * new home in <main> still resolves by its own id). */
+    function viewFor(el) {
+      if (!el) return null;
+      var mv = mainView();
+      if (el === mv) return 'home';
+      var n = el;
+      while (n && n !== mv) {
+        if (n.id && VIEW_OF_ID[n.id]) return VIEW_OF_ID[n.id];
+        if (n.id && VIEW_OF_HEADING[n.id]) return VIEW_OF_HEADING[n.id];
+        if (n.classList) {
+          if (n.classList.contains('pet-card')) return 'home';
+          if (n.classList.contains('checkins')) return 'home';
+          if (n.classList.contains('welcome-card')) return 'home';
+        }
+        var lb = n.getAttribute ? n.getAttribute('aria-labelledby') : null;
+        if (lb && VIEW_OF_HEADING[lb]) return VIEW_OF_HEADING[lb];
+        n = n.parentElement;
+      }
+      return null;
+    }
+
+    function sections() {
+      var mv = mainView();
+      if (!mv) return [];
+      var out = [];
+      for (var i = 0; i < mv.children.length; i++) {
+        var el = mv.children[i];
+        if (el.classList && el.classList.contains('app-footer')) continue;
+        if (viewFor(el)) out.push(el);
+      }
+      return out;
+    }
+
+    function syncNav() {
+      try {
+        var btns = document.querySelectorAll('[data-nav-view]');
+        for (var i = 0; i < btns.length; i++) {
+          if (btns[i].getAttribute('data-nav-view') === currentView) btns[i].setAttribute('aria-current', 'page');
+          else btns[i].removeAttribute('aria-current');
+        }
+        var links = document.querySelectorAll('#main-view a[href^="#"]');
+        for (var j = 0; j < links.length; j++) {
+          var id = links[j].getAttribute('href').slice(1);
+          var v = id ? viewFor(byId(id)) : null;
+          if (v && v === currentView) links[j].setAttribute('aria-current', 'page');
+          else links[j].removeAttribute('aria-current');
+        }
+      } catch (e) { /* marking the current place is a help, never a need */ }
+    }
+
+    function syncTabBar() {
+      var bar = byId('tab-bar');
+      var mv = mainView();
+      if (bar && mv) bar.hidden = !!mv.hidden;
+    }
+
+    function apply() {
+      var list = sections();
+      for (var i = 0; i < list.length; i++) {
+        var v = viewFor(list[i]);
+        list[i].setAttribute('data-view', v);
+        list[i].classList.toggle('view-gated', v !== currentView);
+      }
+      syncNav();
+      syncTabBar();
+    }
+
+    function calmScroll() {
+      try {
+        if (document.documentElement.classList.contains('calm-motion')) return true;
+        if (document.body && document.body.classList.contains('calm')) return true;
+        return !!(typeof window !== 'undefined' && window.matchMedia &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      } catch (e) { return false; }
+    }
+    function scrollEl(el) {
+      if (!el || typeof el.scrollIntoView !== 'function') return;
+      try { el.scrollIntoView({ behavior: calmScroll() ? 'auto' : 'smooth', block: 'start' }); }
+      catch (e) { try { el.scrollIntoView(); } catch (e2) { /* scrolling is a help, never a need */ } }
+    }
+    function focusHeading(el) {
+      if (!el) return;
+      try {
+        var h = el.querySelector ? (el.querySelector('h2, h3') || el) : el;
+        if (h && h.focus) {
+          if (!h.getAttribute('tabindex')) h.setAttribute('tabindex', '-1');
+          h.focus({ preventScroll: true });
+        }
+      } catch (e) { /* focus is a help, never a need */ }
+    }
+    function firstOfView(view) {
+      var list = sections();
+      for (var i = 0; i < list.length; i++) if (viewFor(list[i]) === view) return list[i];
+      return null;
+    }
+
+    function show(view, opts) {
+      opts = opts || {};
+      if (!VIEW_NAMES[view]) view = 'home';
+      currentView = view;
+      apply();
+      var first = firstOfView(view);
+      if (opts.target) { scrollEl(opts.target); if (opts.focus) focusHeading(opts.target); }
+      else if (first) { scrollEl(first); if (opts.focus) focusHeading(first); }
+    }
+
+    function reveal(target, opts) {
+      var el = typeof target === 'string' ? byId(target) : target;
+      if (!el) return;
+      opts = opts || {};
+      var mv = mainView();
+      if (el === mv) { show('home', opts); return; }
+      var v = viewFor(el);
+      if (v && v !== currentView) { currentView = v; apply(); }
+      scrollEl(el);
+      if (opts.focus) focusHeading(el);
+    }
+
+    /* Anchor links inside #main-view are view jumps now, not a long
+     * scroll down one page. The hash stays in step with the anchor id.
+     * Links that point outside #main-view (skip link, tel:, the privacy
+     * policy link after that view relocates) keep their plain behaviour. */
+    function onAnchorClick(ev) {
+      var t = ev.target;
+      var a = t && t.closest ? t.closest('a[href^="#"]') : null;
+      if (!a) return;
+      var mv = mainView();
+      if (!mv || mv.hidden || !mv.contains(a)) return;
+      var id = a.getAttribute('href').slice(1);
+      if (!id) return;
+      var el = byId(id);
+      if (!el || (el !== mv && !mv.contains(el))) return;
+      ev.preventDefault();
+      reveal(el, { focus: true });
+      try { if (window.history && window.history.replaceState) window.history.replaceState(null, '', '#' + id); } catch (e) { /* hash is a help, never a need */ }
+    }
+
+    function initNav() {
+      var mv = mainView();
+      if (!mv) return;
+      var start = 'home';
+      try {
+        if (window.location && window.location.hash && window.location.hash.length > 1) {
+          var hel = byId(window.location.hash.slice(1));
+          var hv = hel ? viewFor(hel) : null;
+          if (hv) start = hv;
+        }
+      } catch (e) { /* start at home */ }
+      currentView = start;
+      apply();
+      var btns = document.querySelectorAll('[data-nav-view]');
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].addEventListener('click', function () {
+          show(this.getAttribute('data-nav-view'), { focus: true });
+        });
+      }
+      document.addEventListener('click', onAnchorClick);
+      /* Cards other code adds later (alerts card, welcome cards) get
+       * gated for their tab as soon as they appear; the tab bar follows
+       * the main view whenever core code shows or hides it (adopt,
+       * pause, privacy). */
+      try {
+        if (typeof MutationObserver !== 'undefined') {
+          var mo = new MutationObserver(function () { apply(); });
+          mo.observe(mv, { childList: true });
+          var mo2 = new MutationObserver(function () { syncTabBar(); });
+          mo2.observe(mv, { attributes: true, attributeFilter: ['hidden'] });
+        }
+      } catch (e) { /* gating still happens on every show/reveal */ }
+      syncTabBar();
+      if (start !== 'home') {
+        var target = null;
+        try { target = byId(window.location.hash.slice(1)); } catch (e) { target = null; }
+        if (target && viewFor(target) === start) scrollEl(target);
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.RootlingNav = {
+        show: function (view) { show(view, { focus: true }); },
+        reveal: reveal,
+        current: function () { return currentView; }
+      };
+    }
+    if (typeof document !== 'undefined') {
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initNav);
+      else initNav();
     }
   })();
 

@@ -234,6 +234,9 @@
       restoreSnapshot(vault[companionId] || null);
       lsSet(LIVE_KEY, companionId);
     }
+    /* Choosing a companion is durable: the chosen one takes the star, so
+     * the pick survives new sessions (Defect-1 fix, 2026-10-15). */
+    reg.companions.forEach(function (c) { c.isMain = (c.id === companionId); });
     reg.activeId = companionId;
     saveVault(vault);
     saveRegistry(reg);
@@ -303,9 +306,30 @@
     if (!reg.companions.length) return;
     var override = null;
     try { override = window.sessionStorage.getItem(OVERRIDE_KEY); } catch (e) { override = null; }
-    var desired = (override && entryById(reg, override)) ? override : mainEntry(reg).id;
+    /* Who renders (Defect-1 fix, 2026-10-15): the companion whose state is
+     * LIVE is the companion in use — the one last adopted, chosen, or
+     * played with. A session pick wins first; then the live record; then
+     * the last active record; the main star is only the last resort. The
+     * old rule jumped straight to the star, so a first-ever test pet kept
+     * the star and every fresh visit swapped the pet away to it. */
+    var liveNow = liveId();
+    var desired = null;
+    if (override && entryById(reg, override)) desired = override;
+    else if (liveNow && entryById(reg, liveNow)) desired = liveNow;
+    else if (reg.activeId && entryById(reg, reg.activeId)) desired = reg.activeId;
+    else desired = mainEntry(reg).id;
+    /* Keep the star ON the companion in use, so the record and the render
+     * can never drift apart again. A stale star is superseded by the live
+     * record — nothing is deleted and no store shape changes. */
+    var dirty = false;
+    reg.companions.forEach(function (c) {
+      var m = (c.id === desired);
+      if (c.isMain !== m) { c.isMain = m; dirty = true; }
+    });
+    if (reg.activeId !== desired) { reg.activeId = desired; dirty = true; }
+    if (dirty) saveRegistry(reg);
     if (liveId() !== desired) swapTo(desired);
-    else { reg.activeId = desired; saveRegistry(reg); }
+    else if (dirty) saveRegistry(reg);
   }
 
   /* Called by the core adopt form when a companion is adopted. */
@@ -316,7 +340,11 @@
       adoptAsMain = !!window.sessionStorage.getItem(AS_MAIN_KEY);
       window.sessionStorage.removeItem(AS_MAIN_KEY);
     } catch (e) { adoptAsMain = false; }
-    if (adoptAsMain) reg.companions.forEach(function (c) { c.isMain = false; });
+    /* The companion you just adopted is your main companion — adopting is
+     * choosing (Defect-1 fix, 2026-10-15). The old rule left the star on
+     * the oldest record, so Home kept opening on a pet the user had moved
+     * on from. */
+    reg.companions.forEach(function (c) { c.isMain = false; });
     var pending = parseJson(lsGet(PENDING_KEY)) || {};
     var category = info.category || pending.category || (info.form === 'plant' ? 'plants' : 'pets');
     var species = info.species || pending.species || (info.form === 'plant' ? 'Sprout' : 'Companion Cub');
@@ -327,7 +355,7 @@
       form: info.form || catById(category).form,
       personality: personalityId,
       identityLine: info.identityLine || pending.identityLine || identityLine(species, personalityId, category),
-      isMain: reg.companions.length === 0 || adoptAsMain,
+      isMain: true,
       createdAt: dayKey(),
       interactions: { chat: 0, play: 0, focus: 0, care: 0, days: {} },
       traitWord: '', traitAnnounced: false, giftLastOpened: ''
@@ -463,7 +491,12 @@
   }
   function scrollToId(id) {
     var t = $(id);
-    if (t && t.scrollIntoView) { try { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { t.scrollIntoView(); } }
+    if (!t) return;
+    /* Layout pass: switch to the target's view before scrolling. */
+    if (typeof window !== 'undefined' && window.RootlingNav && window.RootlingNav.reveal) {
+      try { window.RootlingNav.reveal(t); return; } catch (e) { /* fall through to a plain scroll */ }
+    }
+    if (t.scrollIntoView) { try { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { t.scrollIntoView(); } }
   }
 
   var pending = parseJson(lsGet(PENDING_KEY)) || {
@@ -737,7 +770,14 @@
     });
     fillManageCard();
   }
-  function scrollToEl(elm) { if (elm && elm.scrollIntoView) { try { elm.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { elm.scrollIntoView(); } } }
+  function scrollToEl(elm) {
+    if (!elm) return;
+    /* Layout pass: switch to the target's view before scrolling. */
+    if (typeof window !== 'undefined' && window.RootlingNav && window.RootlingNav.reveal) {
+      try { window.RootlingNav.reveal(elm); return; } catch (e) { /* fall through to a plain scroll */ }
+    }
+    if (elm.scrollIntoView) { try { elm.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { elm.scrollIntoView(); } }
+  }
 
   /* ---------------- home extras: gift, welcome, trait ---------------- */
   function liveEntry() {

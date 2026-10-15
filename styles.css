@@ -19,18 +19,28 @@
 html{-webkit-text-size-adjust:100%}
 body{
   margin:0;
-  background:linear-gradient(180deg,var(--sun-soft) 0,var(--cream) 220px,var(--cream) 100%);
+  /* Letterbox: the page around the app column is one flat tone; the
+     warm gradient lives on the column itself (main, below). */
+  background-color:var(--cream);
   color:var(--ink);
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   line-height:1.5;
   min-height:100vh;
+  min-height:100dvh;
+  display:flex;
+  flex-direction:column;
 }
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-main{max-width:560px;margin:0 auto;padding:0 16px 40px}
+main{
+  max-width:480px;width:100%;margin:0 auto;padding:0 16px 40px;
+  background:linear-gradient(180deg,var(--sun-soft) 0,var(--cream) 220px,var(--cream) 100%);
+  box-shadow:0 0 24px rgba(0,0,0,0.06);
+  flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
+}
 
 /* Header */
 .app-header{
-  max-width:560px;margin:0 auto;padding:18px 16px 6px;
+  max-width:480px;width:100%;margin:0 auto;padding:18px 16px 6px;flex:none;
   display:flex;align-items:center;justify-content:space-between;gap:12px;
 }
 .brand{display:flex;align-items:center;gap:10px}
@@ -207,7 +217,7 @@ body.text-roomy .checkin-card .q,body.text-roomy .gentle.small{font-size:1rem}
 .changes-list{margin:8px 0 0;padding-left:20px;font-size:0.9062rem;color:var(--ink)}
 
 /* Pause / quiet view (coordinator D1 fix, per UX spec) */
-#quiet-view{max-width:560px;margin:48px auto;padding:0 16px 40px;text-align:center}
+#quiet-view{max-width:480px;width:100%;margin:48px auto;padding:0 16px 40px;text-align:center}
 #quiet-view .pet-img{animation:none}
 #quiet-colour{height:140px;border-radius:14px;background:var(--leaf-soft);margin-bottom:16px}
 .quiet-text{font-size:1.0312rem;color:var(--ink);margin:0 0 18px}
@@ -403,3 +413,51 @@ html[data-theme="contrast"] .shelf-badge{color:#000000;border-color:#000000}
   font:inherit;width:100%;padding:12px 14px;border:1.5px solid var(--line);
   border-radius:12px;background:var(--paper);min-height:50px;box-sizing:border-box;margin:6px 0 10px;
 }
+
+/* ===== Five tabs (layout pass, 2026-10-15) =====
+   #main-view used to be one mega-page of ~16 viewports. Now a view
+   manager in app.js shows one tab at a time: sections outside the
+   active tab get .view-gated. The class composes with each section's
+   own hidden attribute — either one hides the section. The footer is
+   never gated, so the 988 support box stays visible under every tab. */
+.view-gated{display:none !important}
+
+/* The tab region is bounded to the screen: the header and the tab bar
+   always stay put, and a long tab (Support, with its settings lists)
+   scrolls inside its own region only. Bottom padding keeps the last
+   card clear of the fixed tab bar. */
+#main-view{
+  flex:1 1 auto;min-height:0;max-height:calc(100dvh - 64px);
+  overflow-y:auto;padding-bottom:96px;scroll-padding-bottom:96px;
+}
+#adopt-view{overflow-y:auto;min-height:0}
+body:has(#quiet-view:not([hidden])) main{display:none}
+
+/* Bottom tab bar: five big labeled tap targets, centered with the
+   app column, always visible while the app is open. */
+.tab-bar{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;z-index:900;
+  display:flex;gap:4px;padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+  background:var(--paper);border-top:1.5px solid var(--line);
+  box-shadow:0 -4px 18px rgba(46,90,64,.10);
+}
+.tab-bar[hidden]{display:none}
+.tab-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  min-height:56px;padding:6px 2px;cursor:pointer;
+  background:none;border:2px solid transparent;border-radius:14px;
+  font:inherit;font-weight:700;color:var(--ink-soft);
+}
+.tab-btn .tab-icon{font-size:1.375rem;line-height:1.1}
+.tab-btn .tab-label{font-size:0.8125rem}
+.tab-btn[aria-current="page"]{background:var(--leaf-soft);color:var(--leaf-dark);border-color:var(--sage)}
+
+/* Train Me hub (2026-10-15): picked feeling words read as picked. */
+#train-choices .btn.selected { background: var(--sage); color: #fff; border-color: var(--sage); }
+#train-q { white-space: pre-wrap; }
+
+/* Support-now opener row (2026-10-15): the button stands alone, full
+   width, where the removed bar card used to be. */
+#support-open-row{margin-top:16px}
+#support-open-row .btn{width:100%}

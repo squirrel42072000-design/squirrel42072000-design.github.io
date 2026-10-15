@@ -241,13 +241,6 @@
   <!-- ============ MAIN VIEW ============ -->
   <div id="main-view" hidden>
 
-    <nav class="quick-actions" aria-label="Change how Rootling supports you">
-      <button type="button" class="btn btn-primary" id="dash-safety-btn">I need support now</button>
-      <a class="btn btn-soft" href="#time-view">🎲 Pick an Activity</a>
-      <a class="btn btn-soft" href="#settings-heading">Support &amp; sensory settings</a>
-      <a class="btn btn-soft" href="#changes-heading">What has changed</a>
-    </nav>
-
     <!-- Help and explain: plain words, one tap to open, one tap to close -->
     <section class="card" id="help-panel" aria-labelledby="help-heading" hidden>
       <h3 id="help-heading">Help</h3>
@@ -293,17 +286,6 @@
       </h2>
       <p id="pet-message" class="pet-message" role="status" aria-live="polite"></p>
       <p id="pet-identity-line" class="gentle" hidden></p>
-      <div id="daily-gift"></div>
-
-      <div class="growth">
-        <div class="growth-row">
-          <span id="growth-text">0 sunshine to the next stage</span>
-        </div>
-        <div class="progress" role="progressbar" aria-label="Progress to next growth stage"
-             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="growth-bar-wrap">
-          <div class="progress-fill" id="growth-fill" style="width:0%"></div>
-        </div>
-      </div>
 
       <dl class="stats">
         <div class="stat">
@@ -321,15 +303,6 @@
       </dl>
       <p id="rest-note" class="rest-note" hidden></p>
     </section>
-
-    <!-- Home: four giant buttons (2026-10-15 rebuild). Chat, Play,
-         Adventure, Home — everything else is one more tap away. -->
-    <nav class="dash-actions" aria-label="Main places">
-      <a class="btn btn-primary dash-btn" id="dash-chat-btn" href="#social-view">💬 Chat</a>
-      <a class="btn btn-soft dash-btn" id="dash-play-btn" href="#time-view">🎲 Play</a>
-      <a class="btn btn-soft dash-btn" id="dash-train-btn" href="#adventures-card">🗺️ Adventure</a>
-      <a class="btn btn-soft dash-btn" id="dash-home-btn" href="#main-view">🏠 Home</a>
-    </nav>
 
     <!-- Adventures: training with story names (2026-10-15). Each one
          takes you to the real thing in one tap — same systems underneath. -->
@@ -365,7 +338,21 @@
     <section class="card" id="companions-view" aria-labelledby="companions-heading">
       <h3 id="companions-heading">Your companions</h3>
       <p class="q">Your collection. Bringing a companion to Home is free, and your main companion stays yours until you pick a new one.</p>
-      <div id="companions-list"></div>
+      <!-- Daily gift lives on the Collection tab (Daniel, 2026-10-15).
+           Same element id, same companions.js logic — only its home
+           in the page moved here from the pet card. -->
+      <div id="daily-gift"></div>
+<div class="growth">
+        <div class="growth-row">
+          <span id="growth-text">0 sunshine to the next stage</span>
+        </div>
+        <div class="progress" role="progressbar" aria-label="Progress to next growth stage"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="growth-bar-wrap">
+          <div class="progress-fill" id="growth-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+            <div id="companions-list"></div>
       <button type="button" class="btn btn-primary" id="adopt-another-btn">Adopt another companion</button>
       <p class="fineprint">One day, companion packs and extra slots may be offered as extras. Nothing here is locked today: every companion you adopt is fully yours.</p>
     </section>
@@ -381,6 +368,35 @@
         <button type="button" class="btn btn-soft" id="change-main-rename-btn">Rename instead</button>
         <button type="button" class="btn btn-primary" id="change-main-yes-btn">Yes — choose a new main companion</button>
         <button type="button" class="btn btn-ghost" id="change-main-no-btn">Not now</button>
+      </div>
+    </section>
+    <!-- Train Me hub (2026-10-15, Daniel's restructure): the pet asks one
+         small question at a time. Answers save into the same stores the
+         old cards used. The old Routines / Feelings / Worry / Journal /
+         Unsent / Sensory / Mute / Day plan / Social Coach cards and the
+         memory-book About-you form moved here. -->
+    <section class="card" id="train-view" aria-labelledby="train-heading">
+      <h3 id="train-heading">Train me</h3>
+      <p class="q">Your pet asks one small question at a time. You can answer, skip, or stop. Nothing is forced.</p>
+      <p class="pet-speech" id="train-q" role="status"></p>
+      <div id="train-choices" class="choice-row" hidden></div>
+      <div id="train-input-wrap">
+        <label for="train-answer" id="train-answer-label">Your answer</label>
+        <textarea id="train-answer" class="voice-target" rows="2" maxlength="1000" placeholder="Your words here"></textarea>
+      </div>
+      <div class="choice-row">
+        <button type="button" class="btn btn-primary" id="train-save">Save my answer</button>
+        <button type="button" class="btn btn-soft" id="train-skip">Skip</button>
+        <button type="button" class="btn btn-ghost" id="train-later">Later</button>
+      </div>
+      <p class="fineprint" id="train-msg" role="status" aria-live="polite"></p>
+      <h4>Pick a topic</h4>
+      <div class="choice-row" id="train-topics"></div>
+      <h4>See what you saved</h4>
+      <div class="choice-row" id="train-show-btns"></div>
+      <div id="train-list-wrap" hidden>
+        <h4 id="train-list-title">Your saved words</h4>
+        <ul id="train-list" class="learned-list"></ul>
       </div>
     </section>
 
@@ -628,11 +644,13 @@
 
     <!-- ============ WELLBEING (Worker 3): day plans, routines, worries, journal ============ -->
 
-    <section class="card" id="well-safety-bar" aria-labelledby="well-safety-heading">
-      <h3 id="well-safety-heading">Support now</h3>
-      <p class="q">What is this? Tap the button if things feel like too much right now. A short, calm page opens.</p>
+    <!-- Support-now opener (2026-10-15): Daniel removed the old bar card
+         — it only duplicated the Safety section below. The opener button
+         keeps its id and wiring and stands alone at the top of this tab:
+         one tap opens the Safety view. -->
+    <div id="support-open-row">
       <button type="button" class="btn btn-primary" id="well-safety-open">I need support now</button>
-    </section>
+    </div>
 
     <section class="card" id="safety-view" aria-labelledby="safety-heading" hidden>
       <h3 id="safety-heading">Support now</h3>
@@ -823,253 +841,15 @@
       <button type="button" class="btn btn-soft" id="safety-back-btn">Back</button>
     </section>
 
-    <section class="card" id="well-dayplan-card" aria-labelledby="well-dayplan-heading">
-      <h3 id="well-dayplan-heading">Your day plan</h3>
-      <p class="q">What is this? Pick the plan that fits today. You can change it at any time.</p>
-      <p class="q">A Low Day is a plan you picked. It is not a bad day. Rest is a good end to a Low Day.</p>
-      <div class="choice-row">
-        <button type="button" class="btn btn-choice" id="well-plan-regular">Use Regular Day</button>
-        <button type="button" class="btn btn-choice" id="well-plan-low">Use Low Day</button>
-      </div>
-      <p class="fineprint" id="well-dayplan-status" role="status" aria-live="polite"></p>
-      <h4>Your Low Day list</h4>
-      <p class="q">What is this? On a Low Day, these few things are the whole day. Doing them is a full day.</p>
-      <ul id="well-floor-list" class="learned-list"></ul>
-      <label for="well-floor-input">Add one thing to your Low Day list</label>
-      <input id="well-floor-input" class="voice-target" type="text" maxlength="80" autocomplete="off" placeholder="One small thing">
-      <button type="button" class="btn btn-soft" id="well-floor-add">Add to Low Day list</button>
-      <h4>Now, Next, Later</h4>
-      <p class="q">What is this? Now is the one thing for now. Next is the thing after it. Later is the rest of today.</p>
-      <p class="q">Now</p>
-      <ul id="well-now-list" class="learned-list"></ul>
-      <p class="q">Next</p>
-      <ul id="well-next-list" class="learned-list"></ul>
-      <p class="q">Later</p>
-      <ul id="well-later-list" class="learned-list"></ul>
-    </section>
 
-    <section class="card" id="well-routines-card" aria-labelledby="well-routines-heading">
-      <h3 id="well-routines-heading">Routines</h3>
-      <p class="q">What is this? A routine is a list of steps, in order. Rootling shows you one step at a time.</p>
-      <h4>Make a new routine</h4>
-      <label for="well-routine-name">Name of the routine</label>
-      <input id="well-routine-name" class="voice-target" type="text" maxlength="40" autocomplete="off" placeholder="Name, like Morning or Night">
-      <label for="well-step-text">One step</label>
-      <input id="well-step-text" class="voice-target" type="text" maxlength="120" autocomplete="off" placeholder="One step, in plain words">
-      <label for="well-step-low">Low Day words for this step (you can leave this blank)</label>
-      <input id="well-step-low" class="voice-target" type="text" maxlength="120" autocomplete="off" placeholder="The same step, but smaller">
-      <button type="button" class="btn btn-soft" id="well-step-add">Add this step</button>
-      <ul id="well-draft-steps" class="learned-list"></ul>
-      <button type="button" class="btn btn-primary" id="well-routine-save">Save routine</button>
-      <p class="fineprint" id="well-routine-status" role="status" aria-live="polite"></p>
-      <h4>Your routines</h4>
-      <p class="q">Tap Start to use a routine. Tap Delete routine to take it off the list. Delete cannot be undone, so tap it only if you are sure.</p>
-      <ul id="well-routine-list" class="learned-list"></ul>
-      <div id="well-run-panel" hidden>
-        <h4 id="well-run-title">Routine</h4>
-        <p class="q" id="well-run-count"></p>
-        <p class="grounding-text" id="well-run-step"></p>
-        <div class="choice-row">
-          <button type="button" class="btn btn-soft" id="well-run-back">Back</button>
-          <button type="button" class="btn btn-primary" id="well-run-done">Done — next step</button>
-        </div>
-        <div class="choice-row">
-          <button type="button" class="btn btn-soft" id="well-run-repeat">See that step again</button>
-          <button type="button" class="btn btn-ghost" id="well-run-stop">Stop for now</button>
-        </div>
-        <p class="fineprint" id="well-run-status" role="status" aria-live="polite"></p>
-      </div>
-    </section>
 
-    <section class="card" id="well-feelings-card" aria-labelledby="well-feelings-heading">
-      <h3 id="well-feelings-heading">Name the feeling</h3>
-      <p class="q">What is this? Tap words that fit how you feel. You can tap one, many, or none.</p>
-      <p class="q" id="well-feelings-prompt" data-well-prompt>Naming a feeling can make it a little smaller. Pick any that fit — or none.</p>
-      <div class="choice-row" id="well-feelings-grid">
-        <button type="button" class="btn btn-chip" data-feeling="happy" aria-pressed="false">Happy</button>
-        <button type="button" class="btn btn-chip" data-feeling="calm" aria-pressed="false">Calm</button>
-        <button type="button" class="btn btn-chip" data-feeling="tired" aria-pressed="false">Tired</button>
-        <button type="button" class="btn btn-chip" data-feeling="sad" aria-pressed="false">Sad</button>
-        <button type="button" class="btn btn-chip" data-feeling="angry" aria-pressed="false">Angry</button>
-        <button type="button" class="btn btn-chip" data-feeling="worried" aria-pressed="false">Worried</button>
-        <button type="button" class="btn btn-chip" data-feeling="overwhelmed" aria-pressed="false">Overwhelmed</button>
-        <button type="button" class="btn btn-chip" data-feeling="numb" aria-pressed="false">Numb</button>
-        <button type="button" class="btn btn-chip" data-feeling="hopeful" aria-pressed="false">Hopeful</button>
-        <button type="button" class="btn btn-chip" data-feeling="frustrated" aria-pressed="false">Frustrated</button>
-        <button type="button" class="btn btn-chip" data-feeling="lonely" aria-pressed="false">Lonely</button>
-        <button type="button" class="btn btn-chip" data-feeling="proud" aria-pressed="false">Proud</button>
-      </div>
-      <button type="button" class="btn btn-soft" id="well-feelings-save">Save these words to my journal</button>
-      <p class="fineprint" id="well-feelings-status" role="status" aria-live="polite"></p>
-    </section>
 
-    <section class="card" id="well-worry-card" aria-labelledby="well-worry-heading">
-      <h3 id="well-worry-heading">Park a worry</h3>
-      <p class="q">What is this? Write a worry down. Rootling keeps it here. You do not have to hold it in your head.</p>
-      <label for="well-worry-input">Your worry, in your own words</label>
-      <input id="well-worry-input" class="voice-target" type="text" maxlength="200" autocomplete="off" placeholder="One worry">
-      <button type="button" class="btn btn-primary" id="well-worry-park">Park this worry</button>
-      <p class="fineprint" id="well-worry-status" role="status" aria-live="polite"></p>
-      <p class="q" id="well-worry-count">No worries parked.</p>
-      <label for="well-worry-time">Worry Time (a time to look at your worries — you can leave this blank)</label>
-      <input id="well-worry-time" type="time">
-      <div class="choice-row">
-        <button type="button" class="btn btn-soft" id="well-worry-time-save">Save Worry Time</button>
-        <button type="button" class="btn btn-ghost" id="well-worry-time-clear">Clear Worry Time</button>
-      </div>
-      <button type="button" class="btn btn-soft" id="well-worry-look">Look at my parked worries now</button>
-      <p class="q" id="well-worry-breaker" hidden>Re-checking can make worries feel bigger. It's parked safely — it will keep until Worry Time.</p>
-      <div id="well-worry-list" hidden></div>
-    </section>
 
-    <section class="card" id="well-journal-card" aria-labelledby="well-journal-heading">
-      <h3 id="well-journal-heading">Journal</h3>
-      <p class="q">What is this? Write a few words about your day. Only you can read this. It stays on this device.</p>
-      <p class="q" id="well-journal-prompt" data-well-prompt>You can write about your day, or leave this blank. Both are fine.</p>
-      <label for="well-journal-input">Your words</label>
-      <textarea id="well-journal-input" class="voice-target" rows="3" maxlength="1000" placeholder="Your words here"></textarea>
-      <button type="button" class="btn btn-primary" id="well-journal-save">Save journal entry</button>
-      <p class="fineprint">Tap Delete under an entry to take it off the list. Right after, you can tap Undo to put it back.</p>
-      <p class="fineprint" id="well-journal-status" role="status" aria-live="polite"></p>
-      <button type="button" class="btn btn-soft" id="well-journal-undo" hidden>Undo delete</button>
-      <ul id="well-journal-list" class="learned-list"></ul>
-    </section>
 
-    <section class="card" id="well-unsent-card" aria-labelledby="well-unsent-heading">
-      <h3 id="well-unsent-heading">Write it unsent</h3>
-      <p class="q">What is this? Write a letter you will not send. Get the words out. Rootling never sends it.</p>
-      <label for="well-unsent-input">Your letter</label>
-      <textarea id="well-unsent-input" class="voice-target" rows="3" maxlength="1000" placeholder="Words you do not need to send"></textarea>
-      <button type="button" class="btn btn-primary" id="well-unsent-save">Park this letter</button>
-      <p class="fineprint">Tap Delete under a letter to take it off the list. Right after, you can tap Undo to put it back. If a letter is ready, you can mark it. You send it yourself, if you choose. Rootling never sends it.</p>
-      <p class="fineprint" id="well-unsent-status" role="status" aria-live="polite"></p>
-      <button type="button" class="btn btn-soft" id="well-unsent-undo" hidden>Undo delete</button>
-      <ul id="well-unsent-list" class="learned-list"></ul>
-    </section>
 
-    <section class="card" id="well-sensory-card" aria-labelledby="well-sensory-heading">
-      <h3 id="well-sensory-heading">How things feel around you</h3>
-      <p class="q">What is this? A short note about sound, light, and your body right now. Some call this a sensory check-in. There are no right words.</p>
-      <button type="button" class="btn btn-soft" id="well-sensory-open">Open this check-in</button>
-      <div id="well-sensory-panel" hidden>
-        <p class="q">Tap the words that fit right now. You can tap one, many, or none.</p>
-        <div class="choice-row">
-          <button type="button" class="btn btn-chip" data-sensory="Too loud" aria-pressed="false">Too loud</button>
-          <button type="button" class="btn btn-chip" data-sensory="Too bright" aria-pressed="false">Too bright</button>
-          <button type="button" class="btn btn-chip" data-sensory="Just right" aria-pressed="false">Just right</button>
-          <button type="button" class="btn btn-chip" data-sensory="Need quiet" aria-pressed="false">Need quiet</button>
-          <button type="button" class="btn btn-chip" data-sensory="Need movement" aria-pressed="false">Need movement</button>
-          <button type="button" class="btn btn-chip" data-sensory="Too still" aria-pressed="false">Too still</button>
-        </div>
-        <label for="well-sensory-note">A note, if you want one (you can leave this blank)</label>
-        <input id="well-sensory-note" class="voice-target" type="text" maxlength="200" autocomplete="off" placeholder="A short note">
-        <button type="button" class="btn btn-primary" id="well-sensory-save">Save how it feels now</button>
-        <p class="fineprint" id="well-sensory-status" role="status" aria-live="polite"></p>
-        <ul id="well-sensory-list" class="learned-list"></ul>
-      </div>
-    </section>
 
-    <section class="card" id="well-mute-card" aria-labelledby="well-mute-heading">
-      <h3 id="well-mute-heading">Words to not show</h3>
-      <p class="q">What is this? Add a word you do not want to see. Short notes in these cards with that word will not show.</p>
-      <p class="q">Your own words always show. Help words and the 988 line always show. This list stays on this device.</p>
-      <label for="well-mute-input">One word to not show</label>
-      <input id="well-mute-input" class="voice-target" type="text" maxlength="40" autocomplete="off" placeholder="One word">
-      <button type="button" class="btn btn-soft" id="well-mute-add">Add this word</button>
-      <p class="fineprint" id="well-mute-status" role="status" aria-live="polite"></p>
-      <ul id="well-mute-list" class="learned-list"></ul>
-    </section>
 
     <!-- ============ SOCIAL COACH (Social worker): scripts, guided practice, cue cards, message worksheet, word helpers, notebook ============ -->
-    <section class="card" id="social-view" aria-labelledby="social-heading">
-      <h3 id="social-heading">Social Coach</h3>
-      <p class="q">Practise words for real life. There are no wrong answers here.</p>
-      <p class="q">The goal is not to change who you are. It is to help you understand people, and say what you mean, as yourself.</p>
-      <p class="fineprint">Everything here stays on this device. Rootling never sends a message for you.</p>
-
-      <h4>Words you can use</h4>
-      <p class="q">Tap a time in life. Words for that time will show.</p>
-      <div id="soc-scripts-list"></div>
-      <div id="soc-script-card"></div>
-      <p class="fineprint" id="soc-scripts-status" role="status" aria-live="polite"></p>
-
-      <h4>Guided practice</h4>
-      <p class="q" id="soc-practice-label">Guided practice. Your pet reads the other part from a script. It is not a real chat.</p>
-      <div id="soc-practice-list"></div>
-      <div id="soc-practice-panel" hidden>
-        <p class="q" id="soc-practice-progress"></p>
-        <p class="q" id="soc-practice-speaker"></p>
-        <p class="q" id="soc-practice-line"></p>
-        <div id="soc-practice-choices"></div>
-        <p class="q" id="soc-practice-reply" hidden></p>
-        <div class="choice-row">
-          <button type="button" class="btn btn-primary" id="soc-practice-next" hidden>Next part</button>
-          <button type="button" class="btn btn-soft" id="soc-practice-again" hidden>Practise again</button>
-          <button type="button" class="btn btn-ghost" id="soc-practice-pick" hidden>Pick a different practice</button>
-        </div>
-        <div id="soc-practice-feedback" hidden></div>
-      </div>
-      <p class="fineprint" id="soc-practice-status" role="status" aria-live="polite"></p>
-
-      <h4>Things you might notice</h4>
-      <p class="q">Tap one thing. You will see what it could mean.</p>
-      <p class="q">One sign can mean more than one thing. Only the person knows for sure.</p>
-      <div id="soc-cues-list"></div>
-      <div id="soc-cue-card"></div>
-
-      <h4>Think about a message</h4>
-      <p class="q" id="soc-ws-fixed">Only the person who sent it knows for sure what they meant. This page helps you think of possibilities.</p>
-      <label for="soc-ws-input">Paste or write the message here</label>
-      <textarea id="soc-ws-input" class="voice-target" rows="3" maxlength="1000" placeholder="The message you got"></textarea>
-      <button type="button" class="btn btn-primary" id="soc-ws-start">Start thinking about it</button>
-      <div id="soc-ws-panel" hidden>
-        <p class="q" id="soc-ws-progress"></p>
-        <div id="soc-ws-stage"></div>
-        <div class="choice-row">
-          <button type="button" class="btn btn-soft" id="soc-ws-back">Back</button>
-          <button type="button" class="btn btn-primary" id="soc-ws-next">Next</button>
-        </div>
-        <button type="button" class="btn btn-soft" id="soc-ws-save" hidden>Save this to my notebook</button>
-      </div>
-      <p class="fineprint" id="soc-ws-status" role="status" aria-live="polite"></p>
-      <ul id="soc-ws-saved-list" class="learned-list"></ul>
-
-      <h4>Help me say it</h4>
-      <p class="q">Pick a kind of words. Fill in the gaps with your own words.</p>
-      <p class="q">Rootling never sends anything. These words are yours to use if you want.</p>
-      <div id="soc-tpl-list"></div>
-      <div id="soc-tpl-form"></div>
-      <label for="soc-tpl-result">My words</label>
-      <textarea id="soc-tpl-result" class="voice-target" rows="3" maxlength="1000" placeholder="Your words will show here"></textarea>
-      <div class="choice-row">
-        <button type="button" class="btn btn-primary" id="soc-tpl-build">Show my words</button>
-        <button type="button" class="btn btn-soft" id="soc-tpl-copy">Copy my words</button>
-      </div>
-      <p class="fineprint" id="soc-tpl-status" role="status" aria-live="polite"></p>
-
-      <h4>My notebook</h4>
-      <p class="q">Write what took place. There is no judging here.</p>
-      <label for="soc-ref-happened">What happened</label>
-      <textarea id="soc-ref-happened" class="voice-target" rows="2" maxlength="1000" placeholder="What took place"></textarea>
-      <label for="soc-ref-confusing">What felt confusing</label>
-      <textarea id="soc-ref-confusing" class="voice-target" rows="2" maxlength="1000" placeholder="The part that felt hard to read"></textarea>
-      <label for="soc-ref-well">What went well</label>
-      <textarea id="soc-ref-well" class="voice-target" rows="2" maxlength="1000" placeholder="One good part, big or small"></textarea>
-      <label for="soc-ref-next">What I might do next</label>
-      <textarea id="soc-ref-next" class="voice-target" rows="2" maxlength="1000" placeholder="One small next step, if any"></textarea>
-      <button type="button" class="btn btn-primary" id="soc-ref-save">Save to my notebook</button>
-      <p class="fineprint" id="soc-ref-status" role="status" aria-live="polite"></p>
-      <ul id="soc-ref-list" class="learned-list"></ul>
-
-      <h4>Brave moments</h4>
-      <p class="q">A brave moment can be small. Sending one message counts.</p>
-      <label for="soc-brave-input">Something brave I did</label>
-      <input id="soc-brave-input" class="voice-target" type="text" maxlength="200" autocomplete="off" placeholder="One brave thing">
-      <button type="button" class="btn btn-primary" id="soc-brave-add">Add my brave moment</button>
-      <p class="q" id="soc-brave-pet" role="status" aria-live="polite"></p>
-      <p class="fineprint" id="soc-brave-status" role="status" aria-live="polite"></p>
-      <ul id="soc-brave-list" class="learned-list"></ul>
-    </section>
 
     <!-- ============ DIGITAL WELLNESS (Digital Wellness worker): time with Rootling, break reminders, activity library, nourished picture, challenges, aims, sticker shelf, grown-ups mirror ============ -->
     <section class="card" id="time-view" aria-labelledby="time-heading">
@@ -1521,23 +1301,7 @@
         <textarea id="memory-keepsake-note" class="voice-target" rows="2" maxlength="500" placeholder="Your words here"></textarea>
         <button type="button" class="btn btn-primary" id="memory-keepsake-add">Save this good moment</button>
 
-        <h4>About you</h4>
-        <p class="q">Words you choose to share. You do not have to fill any of this in.</p>
-        <ul id="memory-about-list" class="learned-list"></ul>
-        <label for="memory-about-name-input">The name you like to be called</label>
-        <input id="memory-about-name-input" class="voice-target" type="text" maxlength="60" autocomplete="off" placeholder="The name you like">
-        <button type="button" class="btn btn-soft" id="memory-about-name-add">Save this name</button>
-        <label for="memory-about-pronouns-input">Your pronouns (you can leave this blank)</label>
-        <input id="memory-about-pronouns-input" class="voice-target" type="text" maxlength="60" autocomplete="off" placeholder="Your words">
-        <button type="button" class="btn btn-soft" id="memory-about-pronouns-add">Save pronouns</button>
-        <label for="memory-about-interest-input">A thing you like doing</label>
-        <input id="memory-about-interest-input" class="voice-target" type="text" maxlength="120" autocomplete="off" placeholder="One thing you like doing">
-        <button type="button" class="btn btn-soft" id="memory-about-interest-add">Add this thing</button>
-        <label for="memory-about-reward-input">What cheers you up</label>
-        <input id="memory-about-reward-input" class="voice-target" type="text" maxlength="120" autocomplete="off" placeholder="One thing that cheers you up">
-        <button type="button" class="btn btn-soft" id="memory-about-reward-add">Add this</button>
-        <p class="fineprint" id="memory-about-status" role="status" aria-live="polite"></p>
-      </div>
+              </div>
     </section>
 
     <!-- Privacy view (Worker 4): dashboard first, then the full policy in
@@ -1667,6 +1431,17 @@
       <button type="button" class="btn btn-ghost" id="reset-btn">Start over with a new companion</button>
     </footer>
   </div>
+
+  <!-- Five-tab bottom bar (Daniel, 2026-10-15): the main way to move
+       in the app. One tap per tab. The view manager in app.js shows
+       and hides it with the main view and marks the tab you are on. -->
+  <nav class="tab-bar" id="tab-bar" aria-label="Main sections" hidden>
+      <button type="button" class="tab-btn" data-nav-view="home" aria-label="Home"><span aria-hidden="true">🏠</span> Home</button>
+      <button type="button" class="tab-btn" data-nav-view="focus" aria-label="Focus and Tasks"><span aria-hidden="true">🎯</span> Focus</button>
+      <button type="button" class="tab-btn" data-nav-view="activities" aria-label="Activities and Adventures"><span aria-hidden="true">🎲</span> Activities</button>
+      <button type="button" class="tab-btn" data-nav-view="companion" aria-label="Companion"><span aria-hidden="true">🐾</span> Companion</button>
+      <button type="button" class="tab-btn" data-nav-view="support" aria-label="Settings and Support"><span aria-hidden="true">⚙️</span> Settings</button>
+    </nav>
 </main>
 
 <!-- Pause / leave quietly: one tap, no confirmation, nothing recorded (research §118) -->
