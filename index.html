@@ -402,6 +402,51 @@
       </div>
     </section>
 
+    <!-- Today Brief (v10): the companion's morning-briefing card — what
+         matters today, in one glance. Everything below supports it. -->
+    <section class="card" id="brief-card" aria-labelledby="brief-heading">
+      <h3 id="brief-heading"><span id="brief-greeting">Hello</span> 🌱</h3>
+      <p class="q" id="brief-mode-line" role="status"></p>
+      <p id="brief-momentum" role="status"></p>
+      <p id="brief-well" role="status"></p>
+      <p id="brief-attention" role="status"></p>
+      <h4>Next best thing</h4>
+      <p id="brief-next" role="status">Nothing picked yet. Any tiny thing counts.</p>
+      <div class="choice-row">
+        <button type="button" class="btn btn-primary" id="brief-start-btn">Start Here</button>
+        <button type="button" class="btn btn-soft" id="brief-cantstart-btn">I Can't Start</button>
+        <button type="button" class="btn btn-soft" id="brief-help-btn">What Would Help Right Now?</button>
+      </div>
+      <p id="brief-help-line" role="status"></p>
+      <h4>Your pet noticed</h4>
+      <p id="brief-noticed" role="status"></p>
+      <p id="brief-cheer" role="status"></p>
+      <div id="brief-recovery" hidden>
+        <h4>Recovery ideas</h4>
+        <ul id="brief-recovery-list" class="learned-list"></ul>
+        <button type="button" class="btn btn-soft" id="brief-gentle-btn">Make today gentle</button>
+      </div>
+    </section>
+
+    <!-- I Can't Start (v10): shrink the task to one tiny step. No list,
+         no overwhelm — pick the easiest step, then just do that. -->
+    <section class="card" id="cantstart-card" aria-labelledby="cantstart-heading" hidden>
+      <h3 id="cantstart-heading">I Can't Start</h3>
+      <p class="q">No problem. Let's shrink it.</p>
+      <p id="cantstart-task" role="status"></p>
+      <form id="cantstart-form">
+        <label for="cantstart-input">What feels too big right now?</label>
+        <input id="cantstart-input" class="voice-target" type="text" maxlength="120" autocomplete="off" placeholder="Name the thing, in your own words">
+      </form>
+      <h4>What feels easiest?</h4>
+      <div id="cantstart-steps" class="choice-col" role="radiogroup" aria-label="Tiny first steps"></div>
+      <p id="cantstart-msg" role="status"></p>
+      <div class="choice-row">
+        <button type="button" class="btn btn-primary" id="cantstart-do-btn">Do This One Thing</button>
+        <button type="button" class="btn btn-ghost" id="cantstart-close-btn">Not now</button>
+      </div>
+    </section>
+
     <!-- Today card: what matters right now, in small chunks only -->
     <section class="card" id="today-card" aria-labelledby="today-heading">
       <h3 id="today-heading">Today</h3>
@@ -1474,6 +1519,8 @@
 <script src="accounts.js"></script>
 <script src="companions.js"></script>
 <script src="traits.js"></script>
+<script src="burnoutEngine.js"></script>
+<script src="companion-ux.js"></script>
 <script src="app.js"></script>
 <script src="notifications.js"></script>
 </body>

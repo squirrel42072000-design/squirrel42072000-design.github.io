@@ -265,6 +265,7 @@
         celebrateBoost: false
       },
       supportNeeds: null, /* traits.js support-needs scores + top supports (v9); null until computed */
+      burnout: null, /* burnoutEngine tired-pattern result (v10); null until computed */
       log: [] /* plain-language entries: { date, text } — shown in the Learned view */
     };
   }
@@ -411,6 +412,7 @@
       learnLog(state, 'You use the grounding tools, so they now stay near the top of your day.', now);
     }
     computeSupportNeeds(state, now);
+    computeBurnout(state, now);
     return ad;
   }
 
@@ -453,6 +455,314 @@
       if (sup) learnLog(state, 'A way your pet helps most now: ' + sup.name + ' — ' + sup.line, now);
     }
     return state.learning.supportNeeds;
+  }
+
+  /* ================= v10 companion experience =================
+   * Today Brief, I Can't Start, Recovery Mode, celebrations, and What
+   * Would Help Right Now (companion-ux.js + burnoutEngine.js). Pure
+   * helpers live in those files; this section owns state and DOM. */
+
+  function uxLib() { return (typeof window !== 'undefined' && window.ROOTLING_UX) || null; }
+  function burnLib() { return (typeof window !== 'undefined' && window.ROOTLING_BURNOUT) || null; }
+  function gel(id) { return document.getElementById(id); }
+
+  /* Facts from the exec store (tasks / open loops). Read-only: try the
+   * live module data first, fall back to the stored JSON. Missing store
+   * simply means no task facts yet — every caller degrades quietly. */
+  function execFacts() {
+    var d = null;
+    try { if (typeof execData !== 'undefined' && execData) d = execData; } catch (e) { d = null; }
+    if (!d) {
+      try {
+        var raw = localStorage.getItem('rootling-exec-v1');
+        if (raw) d = JSON.parse(raw);
+      } catch (e2) { d = null; }
+    }
+    var out = { openLoops: 0, parkedCount: 0, nextText: '', anchorSteps: null, dones: [] };
+    if (!d) return out;
+    var bds = Array.isArray(d.breakdowns) ? d.breakdowns : [];
+    var parked = Array.isArray(d.parked) ? d.parked : [];
+    out.parkedCount = parked.length;
+    for (var i = 0; i < bds.length; i++) {
+      var bd = bds[i];
+      if (bd.mode === 'done') out.dones.push({ id: bd.id, title: bd.title || 'a task', createdAt: bd.createdAt || 0 });
+      else if (bd.mode === 'doing' || bd.mode === 'building') out.openLoops += 1;
+    }
+    out.openLoops += parked.length;
+    if (d.anchor && d.anchor.text) {
+      out.nextText = d.anchor.text;
+      if (d.anchor.kind === 'breakdown' && d.anchor.id) {
+        for (var j = 0; j < bds.length; j++) {
+          if (bds[j].id === d.anchor.id && Array.isArray(bds[j].steps)) {
+            out.anchorSteps = bds[j].steps.slice(bds[j].current || 0);
+          }
+        }
+      }
+    }
+    if (!out.nextText) {
+      for (var k = 0; k < bds.length; k++) {
+        if (bds[k].mode === 'doing' || bds[k].mode === 'building') { out.nextText = bds[k].title || ''; break; }
+      }
+    }
+    return out;
+  }
+
+  var BAND_ORDER = { green: 0, yellow: 1, orange: 2, red: 3 };
+
+  /* Tired-pattern engine (burnoutEngine.js). Same guard discipline as
+   * all learning: nothing computed while learning is off. Social trend
+   * stays null in v10 — no honest in-app signal yet — so it contributes
+   * nothing rather than a guess. A rising band explains itself in the
+   * learn log, and orange/red enters Recovery Mode for the day. */
+  function computeBurnout(state, now) {
+    if (!state.learningEnabled) return null;
+    var lib = burnLib();
+    if (!lib) return state.learning.burnout || null;
+    var sig = state.learning.signals;
+    var skippedTotal = 0;
+    for (var t in (sig.skippedDays || {})) skippedTotal += sig.skippedDays[t];
+    var facts = execFacts();
+    var result = lib.calculateBurnoutRisk({
+      unfinishedTasks: facts.openLoops,
+      wellbeingTrend: ((sig.skippedDays && sig.skippedDays.mood) || 0) >= 2 ? -1 : 0,
+      socialTrend: null,
+      routineTrend: skippedTotal >= 4 ? -1 : 0
+    });
+    var prev = state.learning.burnout;
+    state.learning.burnout = { band: result.band, score: result.score, triggers: result.triggers, date: todayKey(now) };
+    if (prev && BAND_ORDER[result.band] > BAND_ORDER[prev.band] && result.band !== 'green') {
+      learnLog(state, 'Your pet noticed a tired pattern: ' + (result.triggers[0] || 'Things feel like a lot lately.') + ' Asks get smaller and rest comes first while it lasts.', now);
+    }
+    if (result.band === 'orange' || result.band === 'red') {
+      state.recoveryDay = todayKey(now);
+    }
+    return state.learning.burnout;
+  }
+
+  function streakDays(state, now) {
+    var n = 0;
+    var key = todayKey(now);
+    if (state.careDays.indexOf(key) === -1) key = shiftKey(key, -1);
+    while (state.careDays.indexOf(key) !== -1) { n += 1; key = shiftKey(key, -1); }
+    return n;
+  }
+
+  /* Celebration detection: first sight of a finished task is celebrated
+   * once, ever. The first v10 render seeds the seen-set silently, so
+   * celebrations only fire for finishes from now on. Lines live on the
+   * day they fired and render in the Brief. Companion words, no points. */
+  function detectCelebrations(state, facts, now) {
+    var ux = uxLib();
+    if (!ux) return;
+    if (!state.celebration) state.celebration = { seenDone: [], seeded: false, doneKey: '', doneCount: 0, lines: [], linesKey: '' };
+    var cel = state.celebration;
+    var key = todayKey(now);
+    if (cel.doneKey !== key) { cel.doneKey = key; cel.doneCount = 0; }
+    if (cel.linesKey !== key) { cel.linesKey = key; cel.lines = []; }
+    var changed = false;
+    var fresh = [];
+    for (var i = 0; i < facts.dones.length; i++) {
+      if (cel.seenDone.indexOf(facts.dones[i].id) === -1) fresh.push(facts.dones[i]);
+    }
+    if (!cel.seeded) {
+      for (var s = 0; s < facts.dones.length; s++) cel.seenDone.push(facts.dones[s].id);
+      cel.seeded = true;
+      changed = true;
+    } else if (fresh.length) {
+      var wasEmpty = cel.seenDone.length === 0;
+      for (var f = 0; f < fresh.length; f++) {
+        cel.seenDone.push(fresh[f].id);
+        cel.doneCount += 1;
+        var ageDays = fresh[f].createdAt ? Math.floor((now.getTime() - fresh[f].createdAt) / 86400000) : 0;
+        var lines = ux.checkCelebrations({
+          firstFinish: wasEmpty && f === 0,
+          longWaitDays: ageDays, longWaitTitle: fresh[f].title,
+          completedToday: cel.doneCount, streakDays: 0
+        });
+        for (var L = 0; L < lines.length; L++) if (cel.lines.indexOf(lines[L]) === -1) cel.lines.push(lines[L]);
+      }
+      changed = true;
+    }
+    var streak = streakDays(state, now);
+    if (streak === 5 || streak === 7) {
+      var sl = ux.checkCelebrations({ streakDays: streak });
+      for (var m = 0; m < sl.length; m++) if (cel.lines.indexOf(sl[m]) === -1) { cel.lines.push(sl[m]); changed = true; }
+    }
+    if (cel.seenDone.length > 500) { cel.seenDone = cel.seenDone.slice(-500); changed = true; }
+    if (changed) saveState(state);
+  }
+
+  var csTaskText = '';
+  var csSteps = [];
+
+  function openCantStart() {
+    var card = gel('cantstart-card');
+    if (!card) return;
+    var facts = execFacts();
+    csTaskText = facts.nextText || '';
+    var taskEl = gel('cantstart-task');
+    var form = gel('cantstart-form');
+    if (csTaskText) {
+      if (taskEl) taskEl.textContent = 'The thing: ' + csTaskText;
+      if (form) form.hidden = true;
+      csSteps = (facts.anchorSteps && facts.anchorSteps.length) ? facts.anchorSteps.slice(0, 3) : (uxLib() ? uxLib().generateMicroSteps(csTaskText) : []);
+    } else {
+      if (taskEl) taskEl.textContent = '';
+      if (form) form.hidden = false;
+      csSteps = [];
+    }
+    renderCantStartSteps();
+    card.hidden = false;
+    try { card.scrollIntoView({ block: 'start' }); } catch (e) { /* fine */ }
+  }
+
+  function renderCantStartSteps() {
+    var wrap = gel('cantstart-steps');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    for (var i = 0; i < csSteps.length; i++) {
+      var label = document.createElement('label');
+      label.className = 'choice-chip';
+      var radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.name = 'cs-step';
+      radio.value = csSteps[i];
+      if (i === 0) radio.checked = true;
+      label.appendChild(radio);
+      label.appendChild(document.createTextNode(' ' + csSteps[i]));
+      wrap.appendChild(label);
+    }
+  }
+
+  function confirmCantStart() {
+    var msg = gel('cantstart-msg');
+    if (!csTaskText) {
+      var input = gel('cantstart-input');
+      var typed = input ? input.value.trim() : '';
+      if (!typed) { if (msg) msg.textContent = 'Name the thing first — just a few words.'; return; }
+      csTaskText = typed;
+      csSteps = uxLib() ? uxLib().generateMicroSteps(typed) : [];
+      var taskEl = gel('cantstart-task');
+      if (taskEl) taskEl.textContent = 'The thing: ' + typed;
+      var form = gel('cantstart-form');
+      if (form) form.hidden = true;
+      renderCantStartSteps();
+      if (msg) msg.textContent = 'Good. Now pick the easiest step below.';
+      return;
+    }
+    var picked = '';
+    var radios = document.getElementsByName('cs-step');
+    for (var i = 0; i < radios.length; i++) if (radios[i].checked) picked = radios[i].value;
+    if (!picked && csSteps.length) picked = csSteps[0];
+    if (!state.cantStart) state.cantStart = { uses: 0, styles: {} };
+    state.cantStart.uses += 1;
+    if (picked) state.cantStart.styles[picked] = (state.cantStart.styles[picked] || 0) + 1;
+    saveState(state);
+    if (msg) msg.textContent = 'Good. Just do that: ' + picked + '. Nothing else. Your pet is with you.';
+  }
+
+  var v10Wired = false;
+  function initV10() {
+    if (v10Wired) return;
+    v10Wired = true;
+    var startBtn = gel('brief-start-btn');
+    if (startBtn) startBtn.addEventListener('click', function () {
+      var tab = document.querySelector('[data-nav-view="focus"]');
+      if (tab) tab.click();
+    });
+    var csBtn = gel('brief-cantstart-btn');
+    if (csBtn) csBtn.addEventListener('click', openCantStart);
+    var csClose = gel('cantstart-close-btn');
+    if (csClose) csClose.addEventListener('click', function () { var c = gel('cantstart-card'); if (c) c.hidden = true; });
+    var csDo = gel('cantstart-do-btn');
+    if (csDo) csDo.addEventListener('click', confirmCantStart);
+    var gentleBtn = gel('brief-gentle-btn');
+    if (gentleBtn) gentleBtn.addEventListener('click', function () {
+      state.recoveryDay = todayKey();
+      saveState(state);
+      render(new Date());
+    });
+    var helpBtn = gel('brief-help-btn');
+    if (helpBtn) helpBtn.addEventListener('click', function () {
+      var ux = uxLib();
+      var line = gel('brief-help-line');
+      if (!ux || !line) return;
+      var facts = execFacts();
+      var band = (state.learning && state.learning.burnout) ? state.learning.burnout.band : 'green';
+      var help = ux.whatWouldHelp({ band: band, openLoops: facts.openLoops, nextText: facts.nextText });
+      line.textContent = help.text + ' ' + help.why;
+    });
+  }
+
+  /* The Today Brief: greeting, momentum in words, what's going well,
+   * what may need attention, the next best thing, what the pet noticed,
+   * and today's celebrations — one glance, companion voice. */
+  function renderBrief(now) {
+    var card = gel('brief-card');
+    if (!card || !state.petName) return;
+    initV10();
+    now = now || new Date();
+    var ux = uxLib();
+    var facts = execFacts();
+    detectCelebrations(state, facts, now);
+    var key = todayKey(now);
+    var day = state.checkins[key] || {};
+    var doneTypes = typesDone(day);
+    var cel = state.celebration || { doneCount: 0, lines: [] };
+    var greet = gel('brief-greeting');
+    if (greet && ux) greet.textContent = ux.getGreeting(now.getHours());
+    var recovery = state.recoveryDay === key;
+    var modeLine = gel('brief-mode-line');
+    if (modeLine) modeLine.textContent = recovery && ux ? 'Recovery Mode is on. ' + ux.getCompanionMessage(true) : '';
+    var mom = gel('brief-momentum');
+    if (mom && ux) {
+      var score = ux.momentumScore({ completedToday: cel.doneCount || 0, openLoops: facts.openLoops });
+      mom.textContent = 'Today so far: ' + ux.momentumWords(score) + '.';
+    }
+    var well = gel('brief-well');
+    if (well) {
+      var parts = [];
+      if (doneTypes > 0) parts.push(doneTypes + ' of 4 check-ins done');
+      if ((cel.doneCount || 0) > 0) parts.push(cel.doneCount + ' thing(s) finished today');
+      well.textContent = '✅ Going well: ' + (parts.length ? parts.join(', ') + '.' : 'you are here. That counts.');
+    }
+    var att = gel('brief-attention');
+    if (att) {
+      var attParts = [];
+      if (facts.openLoops > 0) attParts.push(facts.openLoops + ' thing(s) your pet is holding for you');
+      var burn = state.learning && state.learning.burnout;
+      if (burn && burn.band !== 'green' && burn.triggers && burn.triggers.length) attParts.push(burn.triggers[0]);
+      att.textContent = attParts.length ? '⚠️ May need attention: ' + attParts.join('. ') + '.' : '';
+    }
+    var next = gel('brief-next');
+    if (next) next.textContent = facts.nextText ? '🎯 ' + facts.nextText : 'Nothing picked yet. Any tiny thing counts.';
+    var noticed = gel('brief-noticed');
+    if (noticed) {
+      var ad = state.learningEnabled && state.learning ? state.learning.adaptations : null;
+      var sn = state.learningEnabled && state.learning ? state.learning.supportNeeds : null;
+      if (ad && ad.bestHour !== null && ad.bestHour !== undefined) {
+        noticed.textContent = 'You most often check in around ' + hourLabel(ad.bestHour) + '. That time suits you.';
+      } else if (sn && sn.top && sn.top.length && typeof window !== 'undefined' && window.ROOTLING_SUPPORT) {
+        var sup = window.ROOTLING_SUPPORT.supportById(sn.top[0]);
+        noticed.textContent = sup ? 'The help that fits you most right now: ' + sup.name + '. ' + sup.line : '';
+      } else {
+        noticed.textContent = 'Your pet is still learning your days.';
+      }
+    }
+    var cheer = gel('brief-cheer');
+    if (cheer) cheer.textContent = cel.lines && cel.lines.length ? '🎉 ' + cel.lines.join(' ') : '';
+    var rec = gel('brief-recovery');
+    if (rec) {
+      var burnNow = state.learning && state.learning.burnout;
+      var showRec = recovery || (burnNow && (burnNow.band === 'orange' || burnNow.band === 'red'));
+      rec.hidden = !showRec;
+      if (showRec && ux) {
+        var list = gel('brief-recovery-list');
+        if (list) list.innerHTML = ux.getRecoverySuggestions().map(function (s) { return '<li>' + s + '</li>'; }).join('');
+        var gb = gel('brief-gentle-btn');
+        if (gb) gb.hidden = recovery;
+      }
+    }
   }
 
   function hourLabel(h) {
@@ -505,6 +815,10 @@
         var esc0 = window.ROOTLING_SUPPORT.ESCALATION[0];
         if (esc0) facts.push(esc0.line);
       }
+    }
+    var bn = state.learning.burnout;
+    if (bn && bn.band && bn.band !== 'green' && bn.triggers && bn.triggers.length) {
+      facts.push('Your pet noticed a tired pattern: ' + bn.triggers.join(' ') + ' While it lasts, asks are smaller and rest comes first.');
     }
     var anyAdaptation = !!ad.demandLevel || !!ad.promptStyle || Object.keys(ad.microTypes).length > 0 || !!ad.celebrateBoost || !!ad.suggestGrounding || (ad.bestHour !== null && ad.bestHour !== undefined);
     if (anyAdaptation) facts.push('Your chosen support style always comes first: learning only fills in wording or ask size where your style did not already set them, and it never changes previews or calm mode you chose.');
@@ -716,6 +1030,14 @@
        * Focus and lowdemand already celebrate every check-in, so applying
        * the boost there would only duplicate what the user already chose. */
       if (ad.celebrateBoost && (cfg.profileId === 'companion' || cfg.profileId === 'adaptive')) cfg.celebrateEvery = true;
+    }
+    /* Recovery Mode (v10): on a recovery day the app protects energy —
+     * asks go to their smallest and reminders go gentle, whatever the
+     * style or learning said. Entered automatically when the tired
+     * pattern reaches orange/red, or by the user's own tap. */
+    if (state.recoveryDay && state.recoveryDay === todayKey()) {
+      cfg.demand = 'micro';
+      cfg.reminderIntensity = 'gentle';
     }
     /* Law-5 user mix (Worker 3): the user's own picks sit on top of the
      * style pick and on top of anything learned, and each pick moves its
@@ -1224,6 +1546,7 @@
     else msg = pickMessage(mood, state, cfg.literal);
     els.petMessage.textContent = msg;
     setPetImage(mood);
+    renderBrief(now);
 
     if (next) {
       var span = next.min - stage.min;
