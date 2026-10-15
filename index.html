@@ -313,6 +313,10 @@
         <h3 id="ask-heading">Ask <span id="ask-pet-name">your pet</span></h3>
         <span class="ask-level" id="ask-level">Helper level 1</span>
       </div>
+      <div class="ask-sub">
+        <span class="gentle small" id="ask-xp"></span>
+        <button type="button" class="btn btn-chip" id="ask-google-btn" aria-pressed="false">Connect Gmail + Calendar</button>
+      </div>
       <p class="gentle small">Tell me what you need. Try “Check my email”, “Remind me to take my meds at 8”, or “What does research say about ADHD?”</p>
       <div class="ask-log" id="ask-log" role="log" aria-live="polite" aria-label="Talk with your pet"></div>
       <div class="ask-timer" id="ask-timer" hidden>
@@ -327,7 +331,27 @@
         <button type="submit" class="btn btn-primary">Ask</button>
       </form>
       <div class="ask-chips" id="ask-chips" aria-label="Ideas"></div>
-      <p class="fineprint">Your pet works on this device. It shares research with sources, but it never diagnoses and is not medical advice. In a crisis, call or text <strong>988</strong>.</p>
+      <p class="fineprint">Your pet works on this device. It shares research with sources, but it never diagnoses and is not medical advice. In a crisis, call or text <strong>988</strong>. For a medical emergency, call <strong>911</strong>.</p>
+    </section>
+
+    <!-- Move with your pet (v12): steps, active minutes, strength days. -->
+    <section class="card fit-card" id="fit-card" aria-labelledby="fit-heading">
+      <h3 id="fit-heading">Move with your pet</h3>
+      <div class="fit-meter"><p id="fit-steps">0 / 6,000 steps today</p><div class="fit-track"><span id="fit-steps-bar"></span></div></div>
+      <div class="fit-meter"><p id="fit-min">0 / 150 active minutes this week</p><div class="fit-track"><span id="fit-min-bar"></span></div></div>
+      <div class="fit-meter"><p id="fit-str">0 / 2 strength days this week</p><div class="fit-track"><span id="fit-str-bar"></span></div></div>
+      <div class="fit-week" id="fit-week" aria-label="Steps for the last 7 days"></div>
+      <div class="fit-walk" id="fit-walk" hidden>
+        <p class="fit-walk-live" id="fit-walk-live" aria-live="polite">0 steps</p>
+        <button type="button" class="btn btn-primary" id="fit-walk-stop">Stop walk</button>
+      </div>
+      <div class="ask-actions">
+        <button type="button" class="btn btn-primary" id="fit-walk-btn">Walk with me</button>
+        <button type="button" class="btn btn-soft" id="fit-log-btn">Log steps</button>
+        <button type="button" class="btn btn-soft" id="fit-workout-btn">Workout</button>
+        <button type="button" class="btn btn-ghost" id="fit-sum-btn">My week</button>
+      </div>
+      <p class="fineprint">Walks, workouts, and step goals give your pet growth points. A website cannot read your phone’s health app, so type in your steps or walk with me and I will count while Rootling is open. Goals follow <a href="https://www.cdc.gov/physical-activity-basics/guidelines/adults.html" target="_blank" rel="noopener noreferrer">CDC activity guidelines</a>.</p>
     </section>
 
     <!-- Adventures: training with story names (2026-10-15). Each one
@@ -1343,9 +1367,9 @@
       </select>
 
       <details class="ask-details">
-        <summary>Connected helper: read my Gmail and Google Calendar (advanced, off)</summary>
-        <p class="fineprint">With this on, “Check my email” shows your unread count and the newest 5 senders and subjects, and “Plan my day” can add today’s Google Calendar. Access is read-only. Google asks you to allow it each visit. The access pass stays in memory only and is never saved. Rootling never sends, deletes, or stores your email.</p>
-        <p class="fineprint">Set up once (about 10 minutes): 1) Go to console.cloud.google.com and create a project. 2) Turn on the Gmail API and Google Calendar API. 3) Set up the OAuth consent screen (External, Testing) and add your own Google address as a test user. 4) Create an OAuth Client ID of type “Web application” and add this site’s address (for example https://squirrel42072000-design.github.io) under Authorized JavaScript origins. 5) Paste the Client ID below.</p>
+        <summary>Connected helper: Gmail and Google Calendar (off until you connect)</summary>
+        <p class="fineprint">Tap “Connect Gmail + Calendar” on Home. Google shows its own window and asks you to allow access. Then your pet can: show unread email and the newest senders, read your newest email to you, search your email, save drafts (it never sends), read your calendar, and add events you confirm. The access pass stays in memory only (about 1 hour) and is never saved. Disconnect any time by asking “disconnect Google”.</p>
+        <p class="fineprint">If the connect button says setup is needed: 1) Go to console.cloud.google.com and create a project. 2) Turn on the Gmail API and Google Calendar API. 3) Set up the OAuth consent screen (External) and add your Google address as a test user. 4) Create an OAuth Client ID of type “Web application” and add https://squirrel42072000-design.github.io under Authorized JavaScript origins. 5) Paste the Client ID below (or the app owner can put it in config.js for everyone).</p>
         <label for="ask-set-google">Google OAuth Client ID</label>
         <input id="ask-set-google" type="text" autocomplete="off" placeholder="1234-abc.apps.googleusercontent.com">
         <button type="button" class="btn btn-soft" id="ask-set-google-save">Save Google helper</button>
@@ -1601,9 +1625,11 @@
 <script src="traits.js"></script>
 <script src="burnoutEngine.js"></script>
 <script src="companion-ux.js"></script>
+<script src="config.js"></script>
 <script src="research.js"></script>
 <script src="app.js"></script>
 <script src="notifications.js"></script>
+<script src="fitness.js"></script>
 <script src="assistant.js"></script>
 </body>
 </html>

@@ -43,7 +43,8 @@
     'rootling-live-companion-v1',
     'rootling-pending-adopt-v1',
     'rootling-assistant-v1',
-    'rootling-assistant-secrets-v1'
+    'rootling-assistant-secrets-v1',
+    'rootling-fitness-v1'
   ];
 
   var store = null;

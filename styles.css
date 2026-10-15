@@ -507,3 +507,31 @@ form.ask-form:not(#ask-form){flex-direction:column}
 .ask-details summary{cursor:pointer;font-weight:700;color:var(--ink);min-height:32px}
 .ask-details input,.ask-details select{width:100%}
 @media (max-width:560px){.ask-form input{flex-basis:100%}.ask-form .btn{flex:1 1 0}}
+
+/* ---------- v12: fitness, studies, mail, urgent ---------- */
+.ask-sub{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:6px}
+.ask-sub .btn-chip{min-height:36px}
+#ask-google-btn[aria-pressed="true"]{background:var(--leaf-soft);border-color:var(--sage);color:var(--leaf-dark)}
+.ask-urgent{background:#fff1ee;border:1px solid #e8b4a8;color:#8a2c17;border-radius:12px;padding:8px 10px;font-weight:600}
+.ask-study,.ask-mail{padding:6px 0;border-bottom:1px dashed var(--line)}
+.ask-study:last-child,.ask-mail:last-child{border-bottom:0}
+.ask-mail-from{font-weight:600;margin:0 0 2px}
+.fit-card h3{margin-top:0}
+.fit-meter{margin:10px 0}
+.fit-meter p{margin:0 0 4px;font-weight:600;font-variant-numeric:tabular-nums}
+.fit-track{height:12px;border-radius:999px;background:var(--cream);border:1px solid var(--line);overflow:hidden}
+.fit-track span{display:block;height:100%;width:0;background:var(--leaf);border-radius:999px;transition:width .4s ease}
+.fit-week{display:flex;gap:6px;align-items:flex-end;height:80px;margin:12px 0 4px;padding:0 2px}
+.fit-day{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
+.fit-day-bar{width:100%;max-width:28px;border-radius:6px 6px 2px 2px;background:var(--sage)}
+.fit-day-bar.hit{background:var(--leaf)}
+.fit-day-label{font-size:0.75rem;color:var(--ink-soft)}
+.fit-walk{text-align:center;background:var(--leaf-soft);border-radius:16px;padding:12px;margin:10px 0}
+.fit-walk-live{font-size:1.5rem;font-weight:700;color:var(--leaf-dark);margin:0 0 8px;font-variant-numeric:tabular-nums}
+.fit-player{border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--paper);margin-top:8px}
+.fit-player-title{font-weight:700;margin:0 0 4px}
+.fit-now{text-align:center;background:var(--leaf-soft);border-radius:12px;padding:10px;margin:8px 0}
+.fit-now-name{font-weight:700;margin:0}
+.fit-current{font-weight:700;color:var(--leaf-dark)}
+.fit-done{opacity:.55;text-decoration:line-through}
+@media (prefers-reduced-motion: reduce){.fit-track span{transition:none}}
