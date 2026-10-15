@@ -331,6 +331,14 @@
       return s && s.profile ? s.profile : null;
     } catch (e) { return null; }
   }
+  /* v14: several support styles can be picked at once ('mixed'). */
+  function hasProfile(id) {
+    try {
+      var s = JSON.parse(localStorage.getItem('sprout-state-v1'));
+      if (!s) return false;
+      return s.profile === id || (s.profile === 'mixed' && (s.profiles || []).indexOf(id) !== -1);
+    } catch (e) { return false; }
+  }
 
   function planRow(id) {
     var wrap = el('div', 'choice-row');
@@ -365,7 +373,7 @@
     var hint = el('p', 'fineprint', ''); hint.id = 'notify-l3hint-' + id; hint.hidden = true;
     lvl.addEventListener('change', function () {
       var want = Number(lvl.value);
-      if (want === 3 && coreProfile() === 'grounding' && !settings.plans[id].l3Confirmed) {
+      if (want === 3 && hasProfile('grounding') && !settings.plans[id].l3Confirmed) {
         /* PTSD startle protection: level 3 needs the explicit understanding
          * tick first — it is never one accidental dropdown away. */
         lvl.value = String(settings.plans[id].level || 1);
@@ -380,10 +388,10 @@
     lvlRow.appendChild(lvlLab);
     outer.appendChild(lvlRow);
     outer.appendChild(hint);
-    if (coreProfile() === 'focus') {
+    if (hasProfile('focus')) {
       outer.appendChild(el('p', 'fineprint', 'Many people set important routines to level 3 so they cannot be missed. It stays your choice, per routine.'));
     }
-    if (coreProfile() === 'grounding') {
+    if (hasProfile('grounding')) {
       var okRow = el('label', 'check-row');
       var ok = document.createElement('input');
       ok.type = 'checkbox'; ok.id = 'notify-l3ok-' + id;

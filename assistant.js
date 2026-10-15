@@ -396,7 +396,8 @@
   function petState() { try { return window.RootlingApp && window.RootlingApp.getState ? window.RootlingApp.getState() : null; } catch (e) { return null; } }
   function petName() { var s = petState(); return (s && s.petName) || 'Your pet'; }
   function profile() { var s = petState(); return (s && s.profile) || 'companion'; }
-  function literal() { return profile() === 'calm'; }
+  function hasStyle(id) { var s = petState(); return !!s && (s.profile === id || (s.profile === 'mixed' && (s.profiles || []).indexOf(id) !== -1)); }
+  function literal() { return hasStyle('calm'); }
   function execData() { try { return window.RootlingExec && window.RootlingExec.getData ? window.RootlingExec.getData() : null; } catch (e) { return null; } }
   function execSave() {
     var d = execData();
@@ -1595,7 +1596,7 @@
     var al = Object.keys(st.learn.aliases);
     if (al.length) list.push('Your words I know: ' + al.map(function (a) { return '\u201c' + a + '\u201d'; }).join(', ') + '.');
     list.push(prefersLong() ? 'You like longer answers, so I show more.' : 'I keep answers short. Tap \u201cTell me more\u201d any time.');
-    var style = { calm: 'same clear words every time', focus: 'short, fresh, and quick to start', grounding: 'calm and safety first', lowdemand: 'small asks only' }[profile()];
+    var style = { calm: 'same clear words every time', focus: 'short, fresh, and quick to start', grounding: 'calm and safety first', lowdemand: 'small asks only' }[profile() === 'mixed' ? ((petState().profiles || [])[0] || 'companion') : profile()];
     if (style) list.push('My talking style follows your support style: ' + style + '.');
     if (!helped.length && !habits.length && !al.length) list.push('I am still learning. Tap \u201cYes\u201d or \u201cNot really\u201d under my answers to teach me.');
     var ps = petState(); if (ps) lines.push(petName() + ' has ' + ps.sunshine + ' growth points. Check-ins, walks, workouts, focus timers, and logging meds or water all help ' + petName() + ' grow (up to 30 bonus points a day).');

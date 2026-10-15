@@ -67,6 +67,13 @@ The check protects these element ids. Change this list only with Daniel's OK.
 2. Let the pet answer Muse's `pet-brain.js` orders through one router, so no order gets two different answers.
 3. Hand Muse's connected email "noticed" items into the email commands once Muse exposes them.
 
+## Changes made in Muse's lane at Daniel's direct request (v14, Computer)
+Daniel asked for these himself, so Computer built them. Muse, please keep them working, and restyle them as you like:
+- `species-art.js`: the pet picture matches the species the user picked. There's a hand-drawn Kraken, and the other species use their emoji on a scene. Hooks are in `setPetImage`, the quiet screen, and the celebration screen.
+- Support styles can be multi-picked (`buildSupportPicker`, `setSupportPicks`, `mergeProfiles`). Two or more picks become `state.profile = 'mixed'`, with the list in `state.profiles`. Use `primaryProfile(state)` where one id is needed. `notifications.js` uses `hasProfile(id)`.
+- A Back bar on every page except Home, and the phone's Back button now steps through pages (`RootlingNav.back`).
+- Password: Change or Reset in Settings → Account, "Forgot your password?" on the welcome screen, and the new password typed twice.
+
 ## Version log owner tags
 - v7–v10 and the 2026-10-15 17:57 v12: Muse
-- v11, v12 (first), and v13: Computer
+- v11, v12 (first), v13, and v14: Computer

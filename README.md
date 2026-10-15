@@ -5,6 +5,14 @@ Rootling — a cozy self-care pet progressive web app
 
 
 
+
+## v14 — Your real pet, pick several support styles, Back buttons, password reset (2026-10-15, Computer)
+
+- **The picture matches the companion you chose.** Before, every non-plant companion used one generic creature drawing. Now the Kraken is hand-drawn for each stage and mood, and every other species shows its own animal on a matching scene.
+- **"What kind of support helps you?" takes several picks**, both when adopting and in Settings. A mix keeps the gentlest choice from each style.
+- **Back buttons:** a Back bar sits at the top of every page except Home, and the phone's Back button now goes to the last page instead of leaving the app.
+- **Password reset:** Change or Reset in Settings → Account, "Forgot your password?" on the welcome screen, and the new password is typed twice.
+
 ## v13 — Mood care (depression support) and easier sign-in (2026-10-15, Computer)
 
 - **Merge:** brings back Ask your pet and Move with your pet alongside the other v12 update (Connected accounts, AI Access Controls, Things you live with, pet XP line). That update's simpler chat and steps cards stay in the code but are hidden so Home has one chat. Bonus experience now feeds both growth points and pet XP.

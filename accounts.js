@@ -377,6 +377,7 @@
     var emailF = field('Your email', 'email', 'gate-reset-email', 'email');
     var nameF = field('Name on the account', 'text', 'gate-reset-name', 'name');
     var pwF = field('New password (6 or more letters)', 'password', 'gate-reset-password', 'new-password');
+    var pw2F = field('Type the new password again', 'password', 'gate-reset-password2', 'new-password');
     var err = errorBox();
     var btn = el('button', 'btn btn-primary gate-btn', 'Set New Password');
     btn.type = 'button';
@@ -385,6 +386,7 @@
       var name = nameF.input.value.trim().toLowerCase();
       var pw = pwF.input.value;
       if (!pw || pw.length < 6) { err.textContent = 'Please pick a password with 6 or more letters.'; return; }
+      if (pw !== pw2F.input.value) { err.textContent = 'The two new passwords do not match.'; return; }
       var data = loadAccounts();
       var account = null;
       for (var i = 0; i < data.accounts.length; i++) {
@@ -406,7 +408,7 @@
     var back = el('button', 'btn btn-ghost gate-btn', 'Back');
     back.type = 'button';
     back.addEventListener('click', showSignIn);
-    card.appendChild(emailF.wrap); card.appendChild(nameF.wrap); card.appendChild(pwF.wrap);
+    card.appendChild(emailF.wrap); card.appendChild(nameF.wrap); card.appendChild(pwF.wrap); card.appendChild(pw2F.wrap);
     card.appendChild(err); card.appendChild(btn); card.appendChild(back);
   }
 
@@ -439,6 +441,10 @@
       card.appendChild(createBtn);
       card.appendChild(signBtn);
       addQuickButtons(card);
+      var forgot = el('button', 'btn btn-ghost gate-btn', 'Forgot your password?');
+      forgot.type = 'button';
+      forgot.addEventListener('click', showReset);
+      card.appendChild(forgot);
       card.appendChild(el('p', 'fineprint gate-honest', HONEST_LINE));
     }
 
@@ -679,6 +685,46 @@
     function btn(label, cls, fn) { var b = el('button', 'btn ' + (cls || 'btn-soft'), label); b.type = 'button'; b.addEventListener('click', fn); return b; }
     function redraw() { buildSignInOptions(after, fresh()); }
     var a = fresh();
+    /* password: change it (knows the old one) or reset it (forgot) */
+    var r0 = row('Password', 'Change your password here. Forgot it? Use \u201cReset my password\u201d \u2014 your email and the name on the account let you pick a new one on this device.');
+    var pwBox = el('div', 'signin-pw'); pwBox.hidden = true;
+    function pwField(label, id, ac) { var l = el('label', '', label); l.setAttribute('for', id); var i = document.createElement('input'); i.type = 'password'; i.id = id; i.autocomplete = ac; pwBox.appendChild(l); pwBox.appendChild(i); return i; }
+    var mode = 'change';
+    var oldL, oldI = null, emI = null, nmI = null;
+    function buildPw(m) {
+      mode = m; pwBox.innerHTML = '';
+      if (m === 'change') oldI = pwField('Current password', 'signin-pw-old', 'current-password');
+      else {
+        var l1 = el('label', '', 'Your email'); l1.setAttribute('for', 'signin-pw-email'); emI = document.createElement('input'); emI.type = 'email'; emI.id = 'signin-pw-email'; emI.autocomplete = 'email';
+        var l2 = el('label', '', 'Name on the account'); l2.setAttribute('for', 'signin-pw-name'); nmI = document.createElement('input'); nmI.type = 'text'; nmI.id = 'signin-pw-name'; nmI.autocomplete = 'name';
+        pwBox.appendChild(l1); pwBox.appendChild(emI); pwBox.appendChild(l2); pwBox.appendChild(nmI);
+      }
+      var nI = pwField('New password (6 or more letters)', 'signin-pw-new', 'new-password');
+      var cI = pwField('Type the new password again', 'signin-pw-new2', 'new-password');
+      var save = btn('Save new password', 'btn-primary', function () {
+        var np = nI.value;
+        if (!np || np.length < 6) { status.textContent = 'Please pick a password with 6 or more letters.'; return; }
+        if (np !== cI.value) { status.textContent = 'The two new passwords do not match.'; return; }
+        var cur = fresh();
+        var check = m === 'change'
+          ? hashPassword(oldI.value || '', cur.salt).then(function (h) { return h === cur.hash ? '' : 'The current password is not right. Tap \u201cReset my password\u201d if you forgot it.'; })
+          : Promise.resolve((emI.value.trim().toLowerCase() === cur.email && nmI.value.trim().toLowerCase() === String(cur.name).trim().toLowerCase()) ? '' : 'That email and name do not match this account.');
+        check.then(function (problem) {
+          if (problem) { status.textContent = problem; return; }
+          if (cur.hint && cur.hint.toLowerCase().indexOf(np.toLowerCase()) !== -1) { status.textContent = 'Your password reminder has this password in it. Pick a different password, or change the reminder first.'; return; }
+          var salt = makeSalt();
+          hashPassword(np, salt).then(function (hash) {
+            updateAccount(cur.id, function (x) { x.salt = salt; x.hash = hash; });
+            status.textContent = 'Your new password is saved. Use it next time you sign in.';
+            pwBox.hidden = true;
+          });
+        });
+      });
+      pwBox.appendChild(save);
+    }
+    r0.appendChild(btn('Change my password', 'btn-soft', function () { buildPw('change'); pwBox.hidden = false; if (oldI) oldI.focus(); }));
+    r0.appendChild(btn('Reset my password', 'btn-ghost', function () { buildPw('reset'); pwBox.hidden = false; if (emI) emI.focus(); }));
+    r0.parentNode.appendChild(pwBox);
     /* reminder */
     var r1 = row('Password reminder', a.hint ? 'Set. It is shown only when you tap \u201cShow my password reminder\u201d on the sign-in screen.' : 'Not set yet. A reminder helps you remember your password.');
     var hin = document.createElement('input'); hin.type = 'text'; hin.maxLength = 80; hin.id = 'signin-hint-input'; hin.placeholder = 'A clue, not the password'; hin.value = a.hint || '';

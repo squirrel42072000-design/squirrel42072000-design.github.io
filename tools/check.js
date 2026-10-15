@@ -31,10 +31,11 @@ ok('protected ids present');
 /* 3. Scripts: every script tag exists, every module is loaded and cached. */
 const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map(m => m[1].replace(/^\.\//, ''));
 scripts.forEach(s => { if (!fs.existsSync(path.join(R, s))) fail(`index.html loads ${s}, but the file is missing`); });
-const REQUIRED_SCRIPTS = ['accounts.js', 'app.js', 'config.js', 'research.js', 'fitness.js', 'mood.js', 'assistant.js', 'trust.js', 'pet-brain.js', 'traits.js', 'companion-ux.js'];
+const REQUIRED_SCRIPTS = ['accounts.js', 'app.js', 'species-art.js', 'config.js', 'research.js', 'fitness.js', 'mood.js', 'assistant.js', 'trust.js', 'pet-brain.js', 'traits.js', 'companion-ux.js'];
 REQUIRED_SCRIPTS.forEach(s => { if (scripts.indexOf(s) === -1) fail(`index.html no longer loads ${s}`); });
 const order = (a, b) => scripts.indexOf(a) < scripts.indexOf(b);
 if (!order('accounts.js', 'app.js')) fail('accounts.js must load before app.js');
+if (!order('companions.js', 'species-art.js') || !order('species-art.js', 'app.js')) fail('species-art.js must load after companions.js and before app.js');
 if (!order('research.js', 'assistant.js') || !order('mood.js', 'assistant.js') || !order('fitness.js', 'assistant.js')) fail('research.js, fitness.js, mood.js must load before assistant.js');
 const sw = read('sw.js');
 const ver = (sw.match(/CACHE_VERSION = 'rootling-v(\d+)'/) || [])[1];
@@ -50,6 +51,9 @@ STORE_KEYS.forEach(k => { if (acc.indexOf(`'${k}'`) === -1) fail(`accounts.js AP
   if (n < 3) fail(`app.js: '${k}' should appear in MODULE_STORE_KEYS, ALL_KEYS, and AREA_KEYS (found ${n})`);
 });
 ['ask-card', 'fit-card', 'mood-card'].forEach(id => { if (app.indexOf(`'${id}': 'home'`) === -1) fail(`app.js VIEW_OF_ID is missing '${id}': 'home'`); });
+if (app.indexOf('RootlingSpeciesArt') === -1) fail('app.js no longer uses species-art.js (pets would show generic art again)');
+if (app.indexOf('buildSupportPicker(') === -1) fail('app.js: support styles must stay multi-select (Daniel, v14)');
+if (app.indexOf('id = \'view-back-bar\'') === -1 && app.indexOf("bar.id = 'view-back-bar'") === -1) fail('app.js: page Back bar is gone (Daniel, v14)');
 if (app.indexOf('addExperience: function') === -1) fail('app.js: RootlingApp.addExperience is gone (pet growth from abilities depends on it)');
 
 /* 5. Guardrails. */
