@@ -1,9 +1,11 @@
 # squirrel42072000-design.github.io
+
+> Built by two AI builders, Muse (user experience) and Perplexity Computer (abilities and skills), for Daniel. Read [TEAM.md](TEAM.md) and run `node tools/check.js` before every push.
 Rootling — a cozy self-care pet progressive web app
 
 
 
-## v13 — Mood care (depression support) and easier sign-in (2026-10-15)
+## v13 — Mood care (depression support) and easier sign-in (2026-10-15, Computer)
 
 - **Merge:** brings back Ask your pet and Move with your pet alongside the other v12 update (Connected accounts, AI Access Controls, Things you live with, pet XP line). That update's simpler chat and steps cards stay in the code but are hidden so Home has one chat. Bonus experience now feeds both growth points and pet XP.
 - **Depression research:** the "Depression and low mood" topic now has NIMH signs, 988/911 first, and evidence-rated helps (Cochrane behavioural activation, BMJ 2024 exercise review, NICE, loneliness, sleep, three good things, light therapy).
