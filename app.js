@@ -19,7 +19,7 @@
    * NOT exported — it is this device's own request state, not data. */
   var MODULE_STORE_KEYS = ['rootling-appearance-v1', 'rootling-exec-v1',
     'rootling-well-v1', 'rootling-consent-v1', 'rootling-social-v1',
-    'rootling-time-v1', 'rootling-memorybook-v1'];
+    'rootling-time-v1', 'rootling-memorybook-v1', 'rootling-assistant-v1', 'rootling-fitness-v1', 'rootling-mood-v1'];
   /* Soft warning line, not a cap: localStorage origins are commonly
    * limited to roughly 5 MB, so at ~4 MB of stored memory the app tells
    * the user and offers an export first. Nothing is dropped at this line
@@ -3020,7 +3020,29 @@
     setLearningEnabled: setLearningEnabled,
     setToggle: setToggle,
     promptFor: promptFor,
-    getState: function () { return state; }
+    getState: function () { return state; },
+    /* v12/v13: bonus experience from helping, fitness, and mood care.
+     * Feeds the same growth points as check-ins (state.sunshine) AND the
+     * pet's experience points (state.petXp), capped per day. */
+    addExperience: function (points, reason) {
+      points = Math.max(0, Math.round(Number(points) || 0));
+      if (!points || !state.petName) return { added: 0 };
+      var key = todayKey();
+      if (!state.bonusXp || state.bonusXp.date !== key) state.bonusXp = { date: key, pts: 0 };
+      var cap = 30;
+      var add = Math.min(points, cap - state.bonusXp.pts);
+      if (add <= 0) return { added: 0, capped: true, cap: cap };
+      var before = stageFor(state.sunshine, state.form).id;
+      state.sunshine += add;
+      state.petXp = (state.petXp || 0) + add;
+      state.bonusXp.pts += add;
+      state.xpLog = (state.xpLog || []).concat([{ at: Date.now(), pts: add, why: String(reason || '').slice(0, 40) }]).slice(-50);
+      saveState(state);
+      var after = stageFor(state.sunshine, state.form);
+      var up = after.id !== before;
+      try { if (typeof afterCheckin === 'function') afterCheckin({ stageUp: up }); } catch (e) { /* growth is saved even if the picture waits */ }
+      return { added: add, stageUp: up, stageName: after.name, total: state.sunshine, today: state.bonusXp.pts, cap: cap };
+    }
   };
   if (typeof window !== 'undefined') window.SproutApp = api;
   if (typeof window !== 'undefined') window.RootlingApp = api;
@@ -3341,14 +3363,19 @@
     var ALL_KEYS = ['sprout-state-v1', 'rootling-notifications-v1',
       'rootling-persist-requested-v1', 'rootling-appearance-v1',
       'rootling-exec-v1', 'rootling-well-v1', 'rootling-social-v1',
-      'rootling-time-v1', 'rootling-memorybook-v1', CONSENT_KEY];
+      'rootling-time-v1', 'rootling-memorybook-v1', 'rootling-assistant-v1',
+      'rootling-assistant-secrets-v1', 'rootling-fitness-v1', 'rootling-mood-v1', CONSENT_KEY];
     var AREA_KEYS = [
       { key: 'rootling-exec-v1', label: 'Delete tasks and focus data' },
       { key: 'rootling-well-v1', label: 'Delete routines and wellbeing data' },
       { key: 'rootling-appearance-v1', label: 'Delete look and voice settings' },
       { key: 'rootling-social-v1', label: 'Delete social practice data' },
       { key: 'rootling-time-v1', label: 'Delete time and activity data' },
-      { key: 'rootling-memorybook-v1', label: 'Delete memory book data' }
+      { key: 'rootling-memorybook-v1', label: 'Delete memory book data' },
+      { key: 'rootling-assistant-v1', label: 'Delete what Ask your pet learned, reminders, and people' },
+      { key: 'rootling-assistant-secrets-v1', label: 'Delete Ask your pet keys' },
+      { key: 'rootling-fitness-v1', label: 'Delete steps, workouts, and fitness goals' },
+      { key: 'rootling-mood-v1', label: 'Delete mood care data (mood checks, lifts, good things)' }
     ];
     var wizardStep = 1;
     var privacyReturn = null; /* 'adopt' | 'main' | 'wizard' */
@@ -9289,7 +9316,8 @@
       'companion-manage-card': 'support', 'account-card': 'support',
       'notifications-card': 'support', 'learned-view': 'support',
       'memory-book': 'support', 'privacy-view': 'support', 'memory-gate': 'support',
-      'changes-view': 'support', 'welcome-card': 'home'
+      'changes-view': 'support', 'welcome-card': 'home',
+      'ask-card': 'home', 'fit-card': 'home', 'mood-card': 'home', 'ask-settings-card': 'support'
     };
     var VIEW_OF_HEADING = {
       'pet-heading': 'home', 'checkins-heading': 'home',

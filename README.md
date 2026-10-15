@@ -2,6 +2,16 @@
 Rootling — a cozy self-care pet progressive web app
 
 
+
+## v13 — Mood care (depression support) and easier sign-in (2026-10-15)
+
+- **Merge:** brings back Ask your pet and Move with your pet alongside the other v12 update (Connected accounts, AI Access Controls, Things you live with, pet XP line). That update's simpler chat and steps cards stay in the code but are hidden so Home has one chat. Bonus experience now feeds both growth points and pet XP.
+- **Depression research:** the "Depression and low mood" topic now has NIMH signs, 988/911 first, and evidence-rated helps (Cochrane behavioural activation, BMJ 2024 exercise review, NICE, loneliness, sleep, three good things, light therapy).
+- **Mood watch (`mood.js`):** gentle noticing over 14 days of mood faces, low words in chat, step drops, sleep extremes, and mood-check answers. It never diagnoses. It checks in at most once a day, is on by default, and has an off switch. Everything stays on the device.
+- **Mood check:** PHQ-2, then PHQ-9 in plain words. Any answer about self-harm brings up 988 right away. Results come with "not a diagnosis", next steps by score, ready words to book an appointment, FindTreatment.gov, and a "Copy for my doctor" summary.
+- **Lift my mood:** behavioural activation with before/after mood ratings. The pet learns which activities help this person most. Plus Three good things, kind words, a 14-day mood card, and growth points.
+- **Sign-in:** a required password reminder (it can't contain the password, and older accounts are asked to add one), face or fingerprint sign-in through passkeys (the device checks the face or finger, and Rootling verifies the passkey signature), and an optional voice phrase (stored as a salted hash; it checks the words, not the voice).
+
 ## v12 — Health, fitness, Google, and more commands (2026-10-15)
 
 - **Body-health research:** COPD, asthma, type 2 diabetes, high blood pressure, heart health and cardiac rehab, back and chronic pain, osteoarthritis, fibromyalgia, migraine, plus OCD and tics. Each topic shows emergency signs first, evidence strength, and real sources (NHLBI, Cochrane, NIDDK, AHA/ACC, ACP, OARSI, EULAR, NICE, AAN, CDC).

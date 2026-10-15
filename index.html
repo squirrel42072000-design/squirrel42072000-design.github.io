@@ -448,11 +448,76 @@
       </div>
     </section>
 
+    <!-- Ask your pet (v11, Daniel 2026-10-15): the pet as a helper. Type
+         or talk; commands run on this device. See assistant.js. -->
+    <section class="card ask-card" id="ask-card" aria-labelledby="ask-heading">
+      <div class="ask-head">
+        <h3 id="ask-heading">Ask <span id="ask-pet-name">your pet</span></h3>
+        <span class="ask-level" id="ask-level">Helper level 1</span>
+      </div>
+      <div class="ask-sub">
+        <span class="gentle small" id="ask-xp"></span>
+        <button type="button" class="btn btn-chip" id="ask-google-btn" aria-pressed="false">Connect Gmail + Calendar</button>
+      </div>
+      <p class="gentle small">Tell me what you need. Try “Check my email”, “Remind me to take my meds at 8”, or “What does research say about ADHD?”</p>
+      <div class="ask-log" id="ask-log" role="log" aria-live="polite" aria-label="Talk with your pet"></div>
+      <div class="ask-timer" id="ask-timer" hidden>
+        <p class="ask-timer-clock" id="ask-timer-clock">0:00</p>
+        <p class="gentle small" id="ask-timer-label"></p>
+        <button type="button" class="btn btn-ghost" id="ask-timer-stop">Stop timer</button>
+      </div>
+      <form class="ask-form" id="ask-form" autocomplete="off">
+        <label for="ask-input" class="sr-only">Ask your pet</label>
+        <input id="ask-input" type="text" maxlength="300" placeholder="Ask or tell me something…" enterkeyhint="send">
+        <button type="button" class="btn btn-soft" id="ask-mic" aria-pressed="false">🎤 Talk</button>
+        <button type="submit" class="btn btn-primary">Ask</button>
+      </form>
+      <div class="ask-chips" id="ask-chips" aria-label="Ideas"></div>
+      <p class="fineprint">Your pet works on this device. It shares research with sources, but it never diagnoses and is not medical advice. In a crisis, call or text <strong>988</strong>. For a medical emergency, call <strong>911</strong>.</p>
+    </section>
+
+    <!-- Move with your pet (v12): steps, active minutes, strength days. -->
+    <section class="card fit-card" id="fit-card" aria-labelledby="fit-heading">
+      <h3 id="fit-heading">Move with your pet</h3>
+      <div class="fit-meter"><p id="fit-steps">0 / 6,000 steps today</p><div class="fit-track"><span id="fit-steps-bar"></span></div></div>
+      <div class="fit-meter"><p id="fit-min">0 / 150 active minutes this week</p><div class="fit-track"><span id="fit-min-bar"></span></div></div>
+      <div class="fit-meter"><p id="fit-str">0 / 2 strength days this week</p><div class="fit-track"><span id="fit-str-bar"></span></div></div>
+      <div class="fit-week" id="fit-week" aria-label="Steps for the last 7 days"></div>
+      <div class="fit-walk" id="fit-walk" hidden>
+        <p class="fit-walk-live" id="fit-walk-live" aria-live="polite">0 steps</p>
+        <button type="button" class="btn btn-primary" id="fit-walk-stop">Stop walk</button>
+      </div>
+      <div class="ask-actions">
+        <button type="button" class="btn btn-primary" id="fit-walk-btn">Walk with me</button>
+        <button type="button" class="btn btn-soft" id="fit-log-btn">Log steps</button>
+        <button type="button" class="btn btn-soft" id="fit-workout-btn">Workout</button>
+        <button type="button" class="btn btn-ghost" id="fit-sum-btn">My week</button>
+      </div>
+      <p class="fineprint">Walks, workouts, and step goals give your pet growth points. A website cannot read your phone’s health app, so type in your steps or walk with me and I will count while Rootling is open. Goals follow <a href="https://www.cdc.gov/physical-activity-basics/guidelines/adults.html" target="_blank" rel="noopener noreferrer">CDC activity guidelines</a>.</p>
+    </section>
+    <!-- Mood care (v13): depression support. Gentle noticing, never a
+         diagnosis. Mood watch is on by default with an off switch. -->
+    <section class="card mood-card" id="mood-card" aria-labelledby="mood-heading">
+      <h3 id="mood-heading">Mood care</h3>
+      <div class="mood-dots" id="mood-dots" aria-label="Your mood for the last 14 days"></div>
+      <p class="mood-dots-key gentle small">Last 14 days. Darker green is a better day. Empty circles mean no check-in.</p>
+      <p id="mood-status" role="status">Tap a mood face in your check-in each day, and your pet will gently notice if things get heavy for a while.</p>
+      <p id="mood-best" class="gentle" hidden></p>
+      <div class="ask-actions">
+        <button type="button" class="btn btn-primary" id="mood-lift-btn">Lift my mood</button>
+        <button type="button" class="btn btn-soft" id="mood-check-btn">Quick mood check</button>
+        <button type="button" class="btn btn-soft" id="mood-good-btn">Three good things</button>
+        <button type="button" class="btn btn-ghost" id="mood-trend-btn">My 2 weeks</button>
+        <button type="button" class="btn btn-ghost" id="mood-talk-btn">Talk to someone</button>
+      </div>
+      <label class="toggle-row mood-watch-row"><input type="checkbox" id="mood-watch" checked> Mood watch: let my pet gently notice heavy patterns (stays on this device)</label>
+      <p class="fineprint">This is not a diagnosis. The mood check uses the PHQ-2 and PHQ-9 questions doctors use. If you are thinking about hurting yourself, call or text <strong>988</strong> any time.</p>
+    </section>
     <!-- Talk to your pet (v11): orders + chat. The pet understands plain
          orders ("Check my email", "I feel okay", "I can't start") and
          answers on-device; the AI engine adds richer answers when the
          connected layer is on and Privacy Mode is off. -->
-    <section class="card" id="chat-card" aria-labelledby="chat-heading">
+    <section class="card" id="chat-card" aria-labelledby="chat-heading" hidden>
       <h3 id="chat-heading">Talk to your pet</h3>
       <p class="q" id="chat-mode-line">Your pet answers on this device.</p>
       <div id="chat-log" class="chat-log" aria-live="polite" aria-label="Chat with your pet"></div>
@@ -474,7 +539,7 @@
     <!-- Fitness (v12): steps + movement goals, gentle words, no pressure.
          Steps are logged by hand on-device; health-app step sync is a
          native-phase feature. -->
-    <section class="card" id="fitness-card" aria-labelledby="fitness-heading">
+    <section class="card" id="fitness-card" aria-labelledby="fitness-heading" hidden>
       <h3 id="fitness-heading">Move &amp; steps</h3>
       <p id="fitness-today" role="status">Steps today: 0</p>
       <p id="fitness-week" role="status"></p>
@@ -1306,6 +1371,61 @@
     <!-- Connected accounts (v11): OFF by default, opt-in, separate from
          the on-device app. Tokens never live in the app — the backend
          holds them encrypted. The pet never sends or deletes email. -->
+    <section class="card" id="ask-settings-card" aria-labelledby="ask-settings-heading">
+      <h3 id="ask-settings-heading">Ask your pet: helper settings</h3>
+      <p class="fineprint">Everything here is off or on-device until you change it. Each connected helper says exactly what it touches.</p>
+      <label class="check-row" for="ask-set-speak"><input type="checkbox" id="ask-set-speak"><span>Read my pet’s answers aloud</span></label>
+      <label class="check-row" for="ask-set-proactive"><input type="checkbox" id="ask-set-proactive" checked><span>Show ideas my pet thinks I need right now (learned on this device)</span></label>
+      <label for="ask-set-length">Answer length</label>
+      <select id="ask-set-length">
+        <option value="auto">Let my pet learn what I like</option>
+        <option value="short">Always short</option>
+        <option value="more">Always show more</option>
+      </select>
+      <label for="ask-set-mail">My email</label>
+      <select id="ask-set-mail">
+        <option value="">Ask me the first time</option>
+        <option value="gmail">Gmail</option>
+        <option value="outlook">Outlook</option>
+        <option value="yahoo">Yahoo Mail</option>
+        <option value="icloud">iCloud Mail</option>
+        <option value="proton">Proton Mail</option>
+        <option value="app">My email app</option>
+      </select>
+
+      <details class="ask-details">
+        <summary>Connected helper: Gmail and Google Calendar (off until you connect)</summary>
+        <p class="fineprint">Tap “Connect Gmail + Calendar” on Home. Google shows its own window and asks you to allow access. Then your pet can: show unread email and the newest senders, read your newest email to you, search your email, save drafts (it never sends), read your calendar, and add events you confirm. The access pass stays in memory only (about 1 hour) and is never saved. Disconnect any time by asking “disconnect Google”.</p>
+        <p class="fineprint">If the connect button says setup is needed: 1) Go to console.cloud.google.com and create a project. 2) Turn on the Gmail API and Google Calendar API. 3) Set up the OAuth consent screen (External) and add your Google address as a test user. 4) Create an OAuth Client ID of type “Web application” and add https://squirrel42072000-design.github.io under Authorized JavaScript origins. 5) Paste the Client ID below (or the app owner can put it in config.js for everyone).</p>
+        <label for="ask-set-google">Google OAuth Client ID</label>
+        <input id="ask-set-google" type="text" autocomplete="off" placeholder="1234-abc.apps.googleusercontent.com">
+        <button type="button" class="btn btn-soft" id="ask-set-google-save">Save Google helper</button>
+        <p class="gentle small" id="ask-set-google-msg" role="status"></p>
+      </details>
+
+      <details class="ask-details">
+        <summary>Connected helper: smarter AI brain (advanced, off)</summary>
+        <p class="fineprint">Commands and research notes always work on this device. With a smarter brain, open questions (ones your pet does not know) are sent to the AI service you pick, with your pet’s research notes and your last few messages. Your key is saved only on this device and is left out of memory backups. The service you pick may charge you for use.</p>
+        <label for="ask-set-brain-provider">AI service</label>
+        <select id="ask-set-brain-provider">
+          <option value="openai">OpenAI, or any OpenAI-compatible service</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+        </select>
+        <label for="ask-set-brain-key">API key</label>
+        <input id="ask-set-brain-key" type="password" autocomplete="off" placeholder="Paste your key">
+        <label for="ask-set-brain-model">Model (optional)</label>
+        <input id="ask-set-brain-model" type="text" autocomplete="off" placeholder="e.g. gpt-4o-mini or claude-haiku-4-5">
+        <label for="ask-set-brain-url">Service address (optional, OpenAI-compatible only)</label>
+        <input id="ask-set-brain-url" type="url" autocomplete="off" placeholder="https://api.openai.com/v1">
+        <label class="check-row" for="ask-set-brain-on"><input type="checkbox" id="ask-set-brain-on"><span>Turn on the smarter brain</span></label>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="ask-set-brain-save">Save brain</button>
+          <button type="button" class="btn btn-ghost" id="ask-set-brain-forget">Remove all keys</button>
+        </div>
+        <p class="gentle small" id="ask-set-brain-msg" role="status"></p>
+      </details>
+      <p class="fineprint">To see or wipe what your pet learned about helping you, ask it: “What have you learned?”</p>
+    </section>
     <section class="card" id="connected-card" aria-labelledby="connected-heading">
       <h3 id="connected-heading">Connected accounts</h3>
       <p class="q" id="connected-status">Email is not connected. Rootling works fully without it.</p>
@@ -1648,7 +1768,12 @@
 <script src="companion-ux.js"></script>
 <script src="trust.js"></script>
 <script src="pet-brain.js"></script>
+<script src="config.js"></script>
+<script src="research.js"></script>
 <script src="app.js"></script>
 <script src="notifications.js"></script>
+<script src="fitness.js"></script>
+<script src="mood.js"></script>
+<script src="assistant.js"></script>
 </body>
 </html>

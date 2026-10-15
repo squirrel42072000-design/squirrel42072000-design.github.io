@@ -53,6 +53,15 @@
     nice_ocd: { name: 'NICE guideline CG31 — OCD', url: 'https://www.nice.org.uk/guidance/cg31' },
     aan_tics: { name: 'American Academy of Neurology, 2019 — treating tics', url: 'https://www.aan.com/Guidelines/home/GetGuidelineContent/960' },
     cdc_pa: { name: 'CDC — physical activity for adults', url: 'https://www.cdc.gov/physical-activity-basics/guidelines/adults.html' },
+    phq9: { name: 'Kroenke et al., 2001 — the PHQ-9 depression questionnaire', url: 'https://onlinelibrary.wiley.com/doi/full/10.1046/j.1525-1497.2001.016009606.x' },
+    phq2: { name: 'Kroenke et al., 2003 — the 2-question PHQ-2 screener', url: 'https://whooleyquestions.ucsf.edu/sites/g/files/tkssra10876/files/doc/Kroenke.2003.PHQ2_.pdf' },
+    uspstf_dep: { name: 'USPSTF, 2023 — screening adults for depression', url: 'https://www.uspreventiveservicestaskforce.org/uspstf/announcements/final-recommendation-statement-screening-depression-and-suicide-risk-adults' },
+    cochrane_ba: { name: 'Cochrane review, 2020 — behavioural activation for depression', url: 'https://www.cochrane.org/evidence/CD013305_behavioural-activation-therapy-depression-adults' },
+    nimh_dep: { name: 'NIMH — Depression', url: 'https://www.nimh.nih.gov/sites/default/files/health/publications/depression/depression.pdf' },
+    noetel: { name: 'Noetel et al., 2024 — exercise for depression (BMJ)', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10870815/' },
+    lonely: { name: 'Loneliness and new depression, meta-analysis (2022)', url: 'https://link.springer.com/article/10.1007/s00127-022-02261-7' },
+    light: { name: 'Light therapy for non-seasonal depression, meta-analysis (BJPsych Open)', url: 'https://www.cambridge.org/core/journals/bjpsych-open/article/light-therapy-for-nonseasonal-depression-systematic-review-and-metaanalysis/B3250B41E529EF84538BD136F5F14F87' },
+    threegood: { name: '"Three Good Things" randomized trial (2023)', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10202508/' },
     paluch: { name: 'Paluch et al., 2022 — daily steps and mortality (Lancet Public Health)', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9289978/' }
   };
 
@@ -107,19 +116,25 @@
       sources: ['nice_gad', 'nimh_anx', 'breath', 'move']
     },
     {
-      id: 'lowmood', title: 'Low mood',
-      keywords: ['depress', 'sad', 'down', 'low', 'empty', 'hopeless', 'unmotivated', 'numb', 'lonely', 'cry'],
-      plain: 'Low mood can make everything feel heavy and slow. When it lasts most days for weeks, a doctor may call it depression. It is common and it can get better.',
-      common: ['Not enjoying things you used to', 'Low energy', 'Sleeping too much or too little', 'Pulling away from people', 'Being very hard on yourself'],
+      id: 'lowmood', title: 'Depression and low mood',
+      keywords: ['depress', 'depression', 'depressed', 'sad', 'down', 'low mood', 'empty', 'hopeless', 'worthless', 'unmotivated', 'numb', 'lonely', 'cry', 'crying', 'no joy', 'anhedonia', 'blues', 'seasonal', 'sad season', 'postpartum', 'dysthymia'],
+      plain: 'Depression is more than a sad day. It is a low mood or a loss of interest that lasts most of the day, nearly every day, for at least 2 weeks, and gets in the way of life. It is common, it is not your fault, and it is very treatable.',
+      urgent: 'If you are thinking about ending your life or hurting yourself, call or text 988 now (US), any time. If you are in danger right now, call 911.',
+      common: ['Sad, anxious, or "empty" mood that will not lift', 'Losing interest or joy in things you used to like', 'Feeling hopeless, guilty, or worthless', 'Low energy, feeling slowed down', 'Sleeping too much or too little', 'Eating more or less than usual', 'Trouble focusing or deciding', 'Aches with no clear cause', 'Thoughts of death or suicide'],
       helps: [
-        { text: 'Doing small, planned, good-for-you activities (behavioural activation) is a first-line option.', strength: 'Strong', src: 'nice_dep' },
-        { text: 'Moving your body lowered depression symptoms in a large review of reviews.', strength: 'Strong', src: 'move' },
-        { text: 'Guided self-help is the lightest first option guidelines suggest trying.', strength: 'Strong', src: 'nice_dep' }
+        { text: 'Behavioural activation — planning small, doable activities that bring a bit of pleasure or a sense of "I did it" — worked better than usual care in the short term (about 40% more likely to respond).', strength: 'Good', src: 'cochrane_ba' },
+        { text: 'Exercise helped depression about as much as therapy in a 2024 review of 218 trials. Walking or jogging, yoga, and strength training worked best, and harder effort helped more — but any amount counts.', strength: 'Strong', src: 'noetel' },
+        { text: 'For less severe depression, guidelines offer first steps like guided self-help, group exercise, behavioural activation, and CBT, before or instead of medicine.', strength: 'Strong', src: 'nice_dep' },
+        { text: 'Loneliness roughly doubled the odds of new depression across 32 studies. Small moments of connection matter.', strength: 'Good', src: 'lonely' },
+        { text: 'Better sleep helps mood. CBT for insomnia is the top treatment for long-term sleep trouble.', strength: 'Strong', src: 'aasm' },
+        { text: 'Writing down three good things each day lifted well-being in trials. It is a gentle add-on, not a treatment by itself.', strength: 'Some', src: 'threegood' },
+        { text: 'Bright light therapy is a known treatment for seasonal (winter) depression. For depression that is not seasonal, results are mixed.', strength: 'Some', src: 'light' }
       ],
-      pro: ['Guided self-help with a practitioner', 'Group or one-to-one CBT or behavioural activation', 'Medicine, only if you prefer it after talking it through'],
-      proSrc: ['nice_dep'],
-      pet: [{ label: 'One small win', action: 'ask:give me one small win' }, { label: 'Text someone safe', action: 'nav:support' }],
-      sources: ['nice_dep', 'move']
+      pro: ['Talk therapy: CBT, behavioural activation, interpersonal therapy, or counselling', 'Guided self-help or group programs', 'Antidepressant medicine, chosen with a doctor (never start or stop on your own)', 'For severe or long-lasting depression, combined therapy and medicine', 'A check for things that can look like depression, such as thyroid problems, low vitamin levels, or medicine side effects'],
+      proSrc: ['nice_dep', 'nimh_dep'],
+      pet: [{ label: 'Lift my mood now', action: 'ask:lift my mood' }, { label: 'Two-question mood check', action: 'ask:mood check' }, { label: 'Three good things', action: 'ask:three good things' }, { label: 'Text someone safe', action: 'nav:support' }],
+      sources: ['nimh_dep', 'nice_dep', 'cochrane_ba', 'noetel', 'lonely', 'phq9', 'uspstf_dep'],
+      study: 'depression behavioural activation exercise'
     },
     {
       id: 'trauma', title: 'Trauma and PTSD',

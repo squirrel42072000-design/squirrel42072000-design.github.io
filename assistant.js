@@ -190,6 +190,13 @@
   /* Intent table. Order matters: first match wins. Each returns
    * { id, slots }. Aliases the user taught are checked before this. */
   var INTENTS = [
+    { id: 'moodWatch', re: /mood watch (off|on)|(stop|start) (watching|noticing) my mood|turn (off|on) mood watch/ },
+    { id: 'moodCheck', re: /mood check|check (on )?my mood|depression (test|screen|screening|quiz|check)|phq|am i depressed|do i have depression|test (me )?for depression/ },
+    { id: 'moodLift', re: /lift my mood|mood (lift|boost|booster)|make me feel better|help me feel better|cheer me up|i want to feel better|feel better/ },
+    { id: 'goodThings', re: /(three|3) good things|gratitude|grateful|good things (today|journal)|show my good things/ },
+    { id: 'moodTrend', re: /my mood (this|last) (week|two weeks|2 weeks|month)|how (has|have) my mood|mood (trend|history|chart)|what helps my mood|what lifts my mood/ },
+    { id: 'moodKind', re: /say something kind|be kind to me|self.?compassion|i hate myself|i'?m (worthless|useless|a burden)|i am (worthless|useless|a burden)/ },
+    { id: 'depressed', re: /i'?m depressed|i am depressed|i feel depressed|feeling depressed|i have depression|i think i (have|might have) depression|my depression|depressed again|i'?m so depressed/ },
     { id: 'help', re: /^(help( me)?( please)?|what can you do|what else can you do|what do you do|commands|how do (i|you) use (this|you))$/ },
     { id: 'learned', re: /what (have you|did you) learn|what do you know about me|how are you helping me|your level|my pet'?s? (xp|level|points)/ },
     { id: 'forget', re: /^(forget (everything|what you learned|me)|wipe (your )?(memory|learning)|reset (your )?learning)/ },
@@ -452,6 +459,7 @@
     sleep: 'Help me wind down', research: 'What does research say about ADHD?',
     walkStart: 'Start a walk', stepsLog: 'Log my steps', stepsAsk: 'How many steps today?', workout: 'Give me a workout', workoutLog: 'Log a workout',
     medsTook: 'I took my meds', medsCheck: 'Did I take my meds?', fitness: 'My fitness', emailRead: 'Read my newest email', listShow: 'What\u2019s on my shopping list?',
+    moodLift: 'Lift my mood', moodCheck: 'Mood check', goodThings: 'Three good things', moodTrend: 'My mood this week', depressed: 'Lift my mood',
     stretch: 'Stretch with me', waterLog: 'I drank a glass of water', journal: 'Journal', studies: 'Find studies on COPD exercise'
   };
 
@@ -795,7 +803,7 @@
   var FEELING_HELPS = {
     anxious: [{ id: 'breathing', label: 'Breathe with me', fn: doBreathe }, { id: 'grounding', label: 'Grounding: 5 things', fn: doGround },
       { id: 'walk', label: 'Short walk', fn: function () { reply({ text: 'A 5 minute walk counts. Even around the room. Moving helps the body use up the alarm energy.', helpId: 'walk' }); } }],
-    low: [{ id: 'small-win', label: 'One small win', fn: function () { smallWin(); } }, { id: 'people', label: 'Reach a safe person', fn: function () { doCall(''); } },
+    low: [{ id: 'lift', label: 'Lift my mood', fn: function () { doLift(); } }, { id: 'small-win', label: 'One small win', fn: function () { smallWin(); } }, { id: 'people', label: 'Reach a safe person', fn: function () { doCall(''); } },
       { id: 'walk', label: 'Step outside', fn: function () { reply({ text: 'Step outside for 2 minutes. Look at the sky. That is enough.', helpId: 'walk' }); } }],
     angry: [{ id: 'breathing', label: 'Breathe with me', fn: doBreathe }, { id: 'walk', label: 'Move it out', fn: function () { reply({ text: 'Big feelings need somewhere to go. Walk fast, push a wall, or squeeze a pillow for 30 seconds.', helpId: 'walk' }); } },
       { id: 'park', label: 'Park the thought', fn: function () { doPark(''); } }]
@@ -814,7 +822,7 @@
     var helps = rankHelps(FEELING_HELPS[kind]);
     var topic = { anxious: 'anxiety', low: 'lowmood', angry: 'feelings' }[kind];
     reply({ text: opener, buttons: helps.map(function (h, i) { return { label: h.label, cls: i === 0 ? 'btn-primary' : 'btn-soft', fn: h.fn }; }),
-      lines: kind === 'low' ? ['If hard feelings last a long time, a doctor or counselor can really help.'] : null,
+      lines: kind === 'low' ? [moodLevel() !== 'none' ? 'I have noticed a few heavy days lately. If you want, we can do a 2-question mood check together. Say \u201cmood check\u201d.' : 'If hard feelings last 2 weeks or more, a doctor or counselor can really help.'] : null,
       more: [researchMini(topic)] });
   }
   function doSensory() {
@@ -1044,6 +1052,210 @@
     f.addEventListener('submit', function (e) { e.preventDefault(); var v = clean(i.value); if (v) { f.remove(); addUser(v); fn(v); } });
     setTimeout(function () { try { i.focus(); } catch (e) { /* fine */ } }, 50);
     return f;
+  }
+
+  /* ================= v13: mood care (depression support) ================= */
+  var M = function () { return window.RootlingMood || null; };
+  function moodLevel() { try { var m = M(); return m && m.status ? m.status().level : 'none'; } catch (e) { return 'none'; } }
+  var FACES = [{ v: 1, label: 'Rough' }, { v: 2, label: 'Low' }, { v: 3, label: 'Okay' }, { v: 4, label: 'Good' }, { v: 5, label: 'Great' }];
+  function askFace(question, then) {
+    reply({ text: question, buttons: FACES.map(function (f) { return { label: f.v + ' \u00b7 ' + f.label, cls: 'btn-chip', fn: function () { then(f.v); } }; }) });
+  }
+  function crisisReply(lead) {
+    reply({ text: lead || 'Thank you for telling me that. You deserve support from a person right now.', lines: ['Please call or text 988 \u2014 the Suicide and Crisis Lifeline. It is free, private, and open any time.', 'If you are in danger right now, call 911.', 'You do not have to go through this alone.'],
+      buttons: [{ label: 'Call 988', cls: 'btn-primary', fn: function () { window.location.href = 'tel:988'; } }, { label: 'Text 988', fn: function () { window.location.href = 'sms:988'; } }, { label: 'Open my Support page', fn: openSafety }] });
+  }
+
+  function doDepressed() {
+    reply({ text: 'Thank you for telling me. That takes courage, and I am glad you did.',
+      lines: ['I cannot tell you if you have depression \u2014 only a doctor or therapist can. But depression is common, it is not your fault, and it is very treatable.', 'Right now, I can help in small ways. Pick one:', 'If you are having thoughts of hurting yourself, call or text 988 now.'],
+      buttons: [{ label: 'Lift my mood', cls: 'btn-primary', fn: function () { doLift(); } }, { label: 'Two-question mood check', fn: function () { doMoodCheck(); } },
+        { label: 'What research says', fn: function () { var t = window.ROOTLING_RESEARCH && window.ROOTLING_RESEARCH.byId('lowmood'); if (t) showTopic(t, 'about'); } },
+        { label: 'Talk to someone', cls: 'btn-ghost', fn: openSafety }], helpId: 'depressed' });
+  }
+
+  /* PHQ-2, then PHQ-9 if it points that way. Plain words, never a diagnosis. */
+  function doMoodCheck() {
+    var m = M(); if (!m) return;
+    reply({ text: 'Two quick questions about the last 2 weeks. This is a check, not a test you can fail, and it is not a diagnosis. Your answers stay on this device.',
+      buttons: [{ label: 'Start', cls: 'btn-primary', fn: function () { phqAsk([], 2); } }, { label: 'Not now', cls: 'btn-ghost', fn: function () { reply({ text: 'Okay. You can say \u201cmood check\u201d any time.' }); } }] });
+  }
+  function phqAsk(ans, upto) {
+    var m = M(), i = ans.length;
+    if (i >= upto) { if (upto === 2) phq2Done(ans); else phq9Done(ans); return; }
+    var q = m.PHQ9[i];
+    reply({ text: 'Question ' + (i + 1) + ' of ' + upto + '. Over the last 2 weeks, how often have you been bothered by:', lines: [q + '?'],
+      buttons: m.ANSWERS.map(function (a) { return { label: a.label, cls: 'btn-chip', fn: function () {
+        var next = ans.concat([a.v]);
+        if (i === 8 && a.v > 0) crisisReply('Thank you for being honest with me. That is really important, and you deserve help from a person today.');
+        phqAsk(next, upto);
+      } }; }) });
+  }
+  function phq2Done(ans) {
+    var m = M(), score = ans[0] + ans[1];
+    m.addCheck({ type: 'phq2', score: score, item9: 0 });
+    if (score >= 3) {
+      reply({ text: 'Thank you. Your answers suggest it is worth looking a little closer. That is not a diagnosis \u2014 it just means these feelings have been around a lot.',
+        lines: ['Doctors use 7 more questions to understand it better. Want to keep going? It takes about 2 minutes.'],
+        buttons: [{ label: 'Keep going', cls: 'btn-primary', fn: function () { phqAsk(ans, 9); } }, { label: 'Lift my mood instead', fn: function () { doLift(); } }, { label: 'Talk to someone', cls: 'btn-ghost', fn: openSafety }] });
+    } else {
+      reply({ text: 'Thank you. Your answers do not point to depression right now. Hard days still count, and I am here for them.',
+        lines: ['If things feel heavy for 2 weeks or more, check again or talk with a doctor.', xpGive(2, 'mood check')].filter(Boolean),
+        buttons: [{ label: 'Lift my mood', fn: function () { doLift(); } }, { label: 'Three good things', cls: 'btn-ghost', fn: function () { doGoodThings(''); } }] });
+    }
+  }
+  function phq9Done(ans) {
+    var m = M(), score = ans.reduce(function (a, b) { return a + b; }, 0), band = m.phq9Band(score), item9 = ans[8] || 0;
+    var prev = m.getStore().checks.filter(function (c) { return c.type === 'phq9'; }).slice(-1)[0];
+    m.addCheck({ type: 'phq9', score: score, item9: item9, band: band.band });
+    var lines = ['This is not a diagnosis. It is a way for you and a doctor to talk about how you have been.'];
+    if (prev) lines.push(score < prev.score ? 'Last time your score was ' + prev.score + '. It went down, which usually means things are a bit lighter.' : score > prev.score ? 'Last time your score was ' + prev.score + '. It went up, so please be extra kind to yourself and reach out.' : 'Same as last time (' + prev.score + ').');
+    if (item9 > 0 || band.urgency === 'today') lines.push('Please talk to a doctor, therapist, or 988 today. You deserve help now, and help works.');
+    else if (band.urgency === 'soon') lines.push('People with scores like this often feel much better with help. Please make an appointment with a doctor or therapist in the next week or so.');
+    else if (band.urgency === 'watch') lines.push('Some signs are there. Small daily steps can help. If it does not get better in a few weeks, talk with a doctor.');
+    else lines.push('Your answers show few signs right now. Keep doing what helps you.');
+    var x = xpGive(3, 'mood check'); if (x) lines.push(x);
+    var btns = [];
+    if (band.urgency !== 'none' || item9 > 0) {
+      btns.push({ label: 'Words to book an appointment', cls: 'btn-primary', fn: function () { bookWords(score); } });
+      btns.push({ label: 'Find care near me', fn: function () { openUrl('https://findtreatment.gov/'); reply({ text: 'I opened FindTreatment.gov, the free US government finder for mental health care. You can also call 988 to talk now.' }); } });
+    }
+    btns.push({ label: 'Copy for my doctor', fn: function () { copyDoctor(ans, score, band); } });
+    btns.push({ label: 'Lift my mood', cls: 'btn-ghost', fn: function () { doLift(); } });
+    if (score >= 15 || item9 > 0) btns.push({ label: 'Call or text 988', cls: 'btn-ghost', fn: function () { crisisReply('You can talk to a caring person right now.'); } });
+    reply({ text: 'Thank you for doing this. Your score is ' + score + ' out of 27. That is ' + band.words + ' (doctors call it \u201c' + band.band + '\u201d).', lines: lines, buttons: btns });
+  }
+  function copyText(txt, ok) {
+    var done = function () { reply({ text: ok }); };
+    try { navigator.clipboard.writeText(txt).then(done, function () { reply({ text: 'Here it is to copy:', lines: [txt] }); }); } catch (e) { reply({ text: 'Here it is to copy:', lines: [txt] }); }
+  }
+  function copyDoctor(ans, score, band) {
+    var m = M(), d = new Date().toLocaleDateString();
+    var lines = ['PHQ-9 mood check from Rootling, ' + d, 'Total: ' + score + ' / 27 (' + band.band + ')'];
+    m.PHQ9.forEach(function (q, i) { lines.push((i + 1) + '. ' + q + ': ' + m.ANSWERS[ans[i]].label); });
+    var past = m.getStore().checks.filter(function (c) { return c.type === 'phq9'; }).slice(-5).map(function (c) { return new Date(c.at).toLocaleDateString() + ': ' + c.score; });
+    if (past.length > 1) lines.push('Past scores: ' + past.join(', '));
+    copyText(lines.join('\n'), 'Copied. You can paste it into a patient portal message or show it at your visit.');
+  }
+  function bookWords(score) {
+    var w = 'Hi, I would like to make an appointment to talk about my mood. I have been feeling down or not enjoying things for about 2 weeks or more. A mood check (PHQ-9) I took gave a score of ' + score + '. What is the first time you have?';
+    reply({ text: 'Here are words you can say or send. You can read them off the screen on the phone:', lines: [w],
+      buttons: [{ label: 'Copy these words', cls: 'btn-primary', fn: function () { copyText(w, 'Copied. Paste it into your doctor\u2019s message portal, or read it on the phone.'); } },
+        { label: 'Remind me to call tomorrow at 10 am', fn: function () { addReminder('call to make a mood appointment', parseWhen('tomorrow at 10am')); } }] });
+  }
+
+  /* Lift my mood: behavioural activation, with before/after ratings so the pet learns what helps THIS person. */
+  function doLift() {
+    var m = M(); if (!m) return;
+    askFace('Let\u2019s find one small thing to lift your mood. First, how is your mood right now? (1 is rough, 5 is great)', function (before) { liftMenu(before); });
+  }
+  function liftMenu(before) {
+    var m = M(), ranked = m.rankLifts(m.getStore().lifts).filter(function (x) { return x.avg > 0; }).slice(0, 2);
+    var pickL = ranked.map(function (x) { return m.liftById(x.id); }).filter(Boolean);
+    var groups = {}; m.LIFTS.forEach(function (L) { if (pickL.indexOf(L) === -1 && !groups[L.group]) groups[L.group] = L; });
+    var opts = pickL.concat(Object.keys(groups).map(function (g) { return groups[g]; })).slice(0, 7);
+    reply({ text: before <= 2 ? 'Thank you for telling me. When mood is low, doing comes before feeling better. Pick one tiny thing:' : 'Pick one small thing:',
+      lines: pickL.length ? ['The first ' + (pickL.length === 1 ? 'one has' : pickL.length + ' have') + ' helped you before.'] : ['Research shows that small, planned activities can lift mood, even when you do not feel like it.'],
+      buttons: opts.map(function (L, i) { return { label: L.label, cls: i === 0 ? 'btn-primary' : 'btn-soft', fn: function () { liftGo(L, before); } }; })
+        .concat([{ label: 'Something else', cls: 'btn-ghost', fn: function () { liftAll(before); } }]) });
+  }
+  function liftAll(before) {
+    var m = M();
+    reply({ text: 'All my mood lifts:', buttons: m.LIFTS.map(function (L) { return { label: L.group + ': ' + L.label, cls: 'btn-chip', fn: function () { liftGo(L, before); } }; }) });
+  }
+  function liftGo(L, before) {
+    var m = M(), rec = m.addLift({ id: L.id, before: before });
+    var extra = [];
+    if (L.id === 'walk') extra.push({ label: 'Walk with me (count steps)', fn: function () { handle('start a walk', false); } });
+    if (L.id === 'text' || L.id === 'call') extra.push({ label: 'Pick someone', fn: function () { doCall('', L.id === 'text' ? 'text' : 'call'); } });
+    if (L.id === 'stretch') extra.push({ label: 'Stretch with me', fn: function () { handle('stretch with me', false); } });
+    reply({ text: 'Good choice: ' + L.label.toLowerCase() + '.', lines: ['You do not have to enjoy it. Just doing it counts. When you are done, tap \u201cI did it\u201d.'],
+      buttons: [{ label: 'Start ' + L.mins + ' minute timer', cls: 'btn-primary', fn: function () { startTimer(L.mins * 60, L.label); } }]
+        .concat(extra)
+        .concat([{ label: 'I did it', fn: function () { liftAfter(rec, L); } },
+          { label: 'Remind me in 1 hour', cls: 'btn-ghost', fn: function () { addReminder(L.label.toLowerCase() + ' (a small mood lift)', Date.now() + 3600000); } }]) });
+  }
+  function liftAfter(rec, L) {
+    var m = M();
+    askFace('You did it. How is your mood now?', function (after) {
+      m.rateLift(rec, after);
+      var x = xpGive(3, 'mood lift');
+      var t = after > rec.before ? 'Your mood went from ' + rec.before + ' to ' + after + '. I will remember that ' + L.label.toLowerCase() + ' helps you.' :
+        after === rec.before ? 'Your mood stayed at ' + after + '. That is okay. Doing it still counts, and sometimes the lift comes a little later.' :
+        'Thank you for trying. Some days are just hard. You still did something kind for yourself.';
+      reply({ text: t, lines: [x, after <= 2 ? pick(M().KIND) : ''].filter(Boolean),
+        buttons: [{ label: 'One more lift', fn: function () { liftMenu(after); } }, { label: 'Three good things', cls: 'btn-ghost', fn: function () { doGoodThings(''); } }] });
+    });
+  }
+
+  function doGoodThings(raw) {
+    var m = M(); if (!m) return;
+    if (/show/.test(raw || '')) {
+      var g = m.getStore().good.slice(-5).reverse();
+      reply({ text: g.length ? 'Your recent good things:' : 'No good things saved yet. Want to write three now?', list: g.length ? g.map(function (e) { return new Date(e.at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ': ' + e.items.join('; '); }) : null,
+        buttons: [{ label: 'Write three good things', fn: function () { doGoodThings(''); } }] });
+      return;
+    }
+    var f = el('form', 'mood-good-form'); var ins = [];
+    ['Something that went okay today', 'Something that made you smile, even a little', 'Something you are glad you have'].forEach(function (ph, i) {
+      var lab = el('label', 'sr-only', 'Good thing ' + (i + 1)); var inp = el('input', 'mood-good-input'); inp.type = 'text'; inp.placeholder = ph; inp.maxLength = 140; inp.id = 'good-' + Date.now() + '-' + i; lab.htmlFor = inp.id;
+      f.appendChild(lab); f.appendChild(inp); ins.push(inp);
+    });
+    var sb = el('button', 'btn btn-primary', 'Save'); sb.type = 'submit'; f.appendChild(sb);
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var items = ins.map(function (x) { return clean(x.value); }).filter(Boolean);
+      if (!items.length) { ins[0].focus(); return; }
+      m.addGood(items); f.replaceWith(el('p', 'gentle', 'Saved: ' + items.join('; ')));
+      var x = xpGive(3, 'three good things');
+      reply({ text: 'Thank you. Noticing small good things can slowly lift your mood. Tiny ones count \u2014 like a warm drink.', lines: [x].filter(Boolean),
+        buttons: [{ label: 'Remind me every evening at 8 pm', fn: function () { addReminder('write three good things', parseWhen('at 8pm'), true); } }, { label: 'Show my good things', cls: 'btn-ghost', fn: function () { doGoodThings('show'); } }] });
+    });
+    reply({ text: 'Three good things from today. Small is perfect. One is fine too.', node: f });
+  }
+
+  function doMoodTrend() {
+    var m = M(); if (!m) return;
+    var s = m.status(), words = { 1: 'rough', 2: 'low', 3: 'okay', 4: 'good', 5: 'great' };
+    var lines = [];
+    if (s.logged) lines.push('You checked in on ' + s.logged + ' of the last 14 days. On average your mood was about ' + words[Math.round(s.avg)] + ' (' + (Math.round(s.avg * 10) / 10) + ' out of 5). Low days: ' + s.lowDays + '.');
+    else lines.push('No mood check-ins in the last 2 weeks yet. Tap a face in your daily check-in and I can show you a trend.');
+    s.reasons.forEach(function (r) { lines.push('I noticed: ' + r); });
+    var r = m.rankLifts(m.getStore().lifts);
+    if (r.length) lines.push('What helps you most: ' + r.slice(0, 3).map(function (x) { var L = m.liftById(x.id); return (L ? L.label.toLowerCase() : x.id) + ' (' + (x.avg >= 0 ? '+' : '') + (Math.round(x.avg * 10) / 10) + ')'; }).join(', ') + '.');
+    var c = m.getStore().checks.filter(function (x) { return x.type === 'phq9'; }).slice(-3);
+    if (c.length) lines.push('Mood check scores: ' + c.map(function (x) { return new Date(x.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' \u2014 ' + x.score; }).join(', ') + ' (lower is lighter).');
+    reply({ text: 'Your mood, the last 2 weeks:', lines: lines,
+      buttons: [{ label: 'Lift my mood', cls: 'btn-primary', fn: function () { doLift(); } }, { label: 'Mood check', fn: function () { doMoodCheck(); } }] });
+  }
+  function doMoodKind(raw) {
+    var m = M(), hard = /hate myself|worthless|useless|burden/.test(raw || '');
+    reply({ text: hard ? 'I am really sorry you feel that way about yourself. Those thoughts hurt. Heavy feelings can tell you things that are not true about you.' : pick(m ? m.KIND : ['You matter.']),
+      lines: hard ? [pick(m.KIND), 'If those thoughts ever turn into wanting to hurt yourself, call or text 988 right away.'] : null,
+      buttons: [{ label: 'Another kind thought', cls: 'btn-ghost', fn: function () { doMoodKind(''); } }, { label: 'Lift my mood', fn: function () { doLift(); } }].concat(hard ? [{ label: 'Mood check', fn: function () { doMoodCheck(); } }] : []) });
+  }
+  function doMoodWatch(raw) {
+    var m = M(); if (!m) return;
+    var on = !/off|stop/.test(raw);
+    m.setWatch(on);
+    reply({ text: on ? 'Mood watch is on. I will gently notice if things look heavy for a while, and check in at most once a day. It all stays on this device.' : 'Mood watch is off. I will not look for patterns. Crisis words still always bring up 988. You can turn it back on with \u201cmood watch on\u201d.' });
+  }
+  /* Once a day at most, a caring check-in when signals line up. */
+  function moodNudge() {
+    var m = M(); if (!m || !m.shouldNudge) return;
+    var s = m.shouldNudge(); if (!s) return;
+    m.markNudged();
+    if (s.crisis) { crisisReply('I have been thinking about what you shared in your last mood check. I care about you. How are you right now?'); return; }
+    if (s.level === 'concern') {
+      reply({ text: 'I care about you, so I want to gently check in. Here is what I noticed:', list: s.reasons,
+        lines: ['This is not a diagnosis. It just looks like things have been heavy. How have you been, really?'],
+        buttons: [{ label: 'Two-question mood check', cls: 'btn-primary', fn: function () { doMoodCheck(); } }, { label: 'Lift my mood', fn: function () { doLift(); } },
+          { label: 'Talk to someone', fn: openSafety }, { label: 'I am okay, thanks', cls: 'btn-ghost', fn: function () { reply({ text: 'Okay. I am glad. I am here any time you need me.' }); } }] });
+    } else {
+      reply({ text: 'Things have felt a bit heavier lately. ' + (s.reasons[0] || ''), lines: ['Want to try a small mood lift together?'],
+        buttons: [{ label: 'Lift my mood', cls: 'btn-primary', fn: function () { doLift(); } }, { label: 'Not now', cls: 'btn-ghost', fn: function () { reply({ text: 'Okay. I am right here.' }); } }] });
+    }
+    petLine(petName() + ' is checking in on you.');
   }
 
   /* ================= v12 handlers ================= */
@@ -1408,6 +1620,7 @@
     ['Fitness', ['Start a walk', 'I walked 4000 steps', 'I did 30 minutes of yoga', 'Give me a workout', 'Give me a breathing friendly workout', 'Stretch with me', 'Set my step goal to 7000', 'My fitness']],
     ['Health and meds', ['I took my meds', 'Did I take my meds?', 'I drank a glass of water', 'Pursed lip breathing', 'Journal: headache after lunch']],
     ['Research', ['What is COPD?', 'Treatments for anxiety', 'Symptoms of ADHD', 'Find studies on COPD exercise', 'Show my research topics']],
+    ['Mood care', ['Lift my mood', 'Mood check', 'Three good things', 'My mood this week', 'What lifts my mood?', 'I feel depressed', 'Say something kind', 'Treatments for depression', 'Mood watch off']],
     ['Feelings and focus', ['I feel anxious', 'It\u2019s too loud', 'I can\u2019t start my essay', 'Focus with me for 20 minutes', 'Breathe with me', 'Motivate me']],
     ['Everyday', ['What\u2019s the weather?', 'Add eggs and milk to my shopping list', 'Directions to Walmart', 'Find coffee near me', 'Convert 5 miles to km', 'Tip on $45', 'What is 15% of 80', 'How many days until Christmas', 'Translate thank you to Spanish', 'Define resilient', 'Flip a coin', 'Tell me a joke', 'Text Mom']],
     ['Teach me', ['When I say inbox, I mean check my email', 'What have you learned?']]
@@ -1428,6 +1641,7 @@
       prefersLong() ? 'The user likes a bit more detail (up to 8 short sentences).' : 'Keep replies under 5 short sentences.',
       'When asked about symptoms, treatments, or research (mind or body: ADHD, autism, anxiety, COPD, asthma, diabetes, blood pressure, pain, fitness and more), answer like a careful scientist: say what the evidence shows, how strong it is (Strong / Good / Some / Early), and name the source. Use the research notes below first. If you are not sure, say so and suggest "Find studies on <topic>". Never invent studies, numbers, or links.',
       'Body emergencies (chest pain, cannot breathe, stroke signs, blue lips) always get: call 911 now.',
+      'If the user seems low or depressed: be warm and hopeful, say depression is common, not their fault, and treatable; never say they have depression; offer the app\'s "Lift my mood" or "Mood check"; suggest a doctor or therapist if it has lasted 2 weeks or more.',
       'Never diagnose. Never tell the user what condition they have. Describe treatments as things to talk over with a doctor or therapist; never tell anyone to start, stop, or change medicine.',
       'If the user might be in danger or mentions self-harm, tell them to call or text 988 (US) right now, and tell them the Support page has their people.',
       'You can ask the app to run ONE of its own commands by adding a final line exactly like: DO: <command>. The app shows it as a button the user taps to confirm. Commands it understands include: ' + HELP_GROUPS.map(function (g) { return g[1].join('; '); }).join('; ') + '. Only use DO: when the user clearly wants that action. Never claim you already did it.',
@@ -1671,7 +1885,7 @@
   function handle(text, fromUser) {
     var t = clean(text);
     if (!t) return;
-    if (fromUser !== false) addUser(t);
+    if (fromUser !== false) { addUser(t); try { if (window.RootlingMood && window.RootlingMood.noteText) window.RootlingMood.noteText(t); } catch (e) { /* mood watch is a help */ } }
     var r = route(t, aliasDepth < 2 ? st.learn.aliases : null);
     if (r.id === 'alias') { learnUse('alias'); aliasDepth++; try { handle(r.slots[0], false); } finally { aliasDepth--; } return; }
     learnUse(r.id);
@@ -1684,6 +1898,13 @@
           buttons: [{ label: 'Call 988', cls: 'btn-primary', fn: function () { window.location.href = 'tel:988'; } }, { label: 'Text 988', fn: function () { window.location.href = 'sms:988'; } }, { label: 'Open my Support page', fn: openSafety }] });
         return;
       case 'help': doHelp(); return;
+      case 'moodWatch': doMoodWatch(raw); return;
+      case 'moodCheck': doMoodCheck(); return;
+      case 'moodLift': doLift(); return;
+      case 'goodThings': doGoodThings(raw); return;
+      case 'moodTrend': doMoodTrend(); return;
+      case 'moodKind': doMoodKind(raw); return;
+      case 'depressed': doDepressed(); return;
       case 'urgentBody': doUrgentBody(raw); return;
       case 'timeNow': doTimeNow(raw); return;
       case 'daysUntil': doDaysUntil(r.slots[3]); return;
@@ -1796,6 +2017,7 @@
       if (fs && h >= 11 && h < 20 && fs.today.steps < fs.goal.steps) base.splice(1, 0, 'Start a walk');
       if (fs && h >= 7 && h < 20 && fs.week.minutes < fs.goal.minutes / 2) base.push('Give me a workout');
     } catch (e) { /* fitness is optional */ }
+    try { var ml = moodLevel(); if (ml !== 'none') base.unshift('Lift my mood'); if (ml === 'concern') base.splice(1, 0, 'Mood check'); else if (h >= 19) base.push('Three good things'); } catch (e) { /* mood is optional */ }
     base.concat(['What does research say about ADHD?', 'What can you do?']).forEach(function (c) { if (out.indexOf(c) === -1) out.push(c); });
     return out.slice(0, 7);
   }
@@ -1897,6 +2119,7 @@
     w.appendChild(wb); log().appendChild(w);
     checkReminders();
     setInterval(checkReminders, 15000);
+    setTimeout(function () { try { moodNudge(); } catch (e) { /* mood is a help */ } }, 1500);
   }
 
   root.ROOTLING_ASSISTANT = pure;
