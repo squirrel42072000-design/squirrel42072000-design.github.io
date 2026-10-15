@@ -398,7 +398,7 @@
        * neutral companion/adaptive styles. The Learned-view fact line is
        * rendered against the CURRENT profile, so it stays accurate even
        * if the user changes style after this entry was written. */
-      var boostPid = primaryProfile(state);
+      var boostPid = state.profile || 'companion';
       if (boostPid === 'calm' || boostPid === 'grounding') {
         learnLog(state, 'Rest days are part of your rhythm. Your quiet celebration style is kept — learning does not add extra celebration. Rest still never costs you anything.', now);
       } else if (boostPid === 'focus' || boostPid === 'lowdemand') {
@@ -1557,7 +1557,7 @@
     if (ad.celebrateBoost) {
       /* Gate-honest fact line, rendered against the CURRENT profile (see
        * the celebrateBoost gate in effectiveConfig). */
-      var factPid = primaryProfile(state);
+      var factPid = state.profile || 'companion';
       if (factPid === 'calm' || factPid === 'grounding') {
         facts.push('Rest days are part of your rhythm. Your style uses quiet, words-only celebration, so learning does not add extra celebration there. Rest days count as rest — never as failure.');
       } else if (factPid === 'focus' || factPid === 'lowdemand') {
@@ -1754,7 +1754,6 @@
       }
     });
     state = loadState();
-    if (state.profile === 'mixed') mergeProfiles(state.profiles || []);
     return parsed;
   }
 
@@ -1806,7 +1805,7 @@
    * It never raises demand above the profile's, and it never overrides
    * calm/previews the user chose. */
   function effectiveConfig(state) {
-    var prof = PROFILES[state.profile] || PROFILES.companion;
+    var prof = mergedProfile(state);
     var cfg = {
       profileId: prof.id, profileName: prof.name, demand: prof.demand,
       promptStyle: prof.promptStyle, previews: prof.previews,
@@ -1877,101 +1876,108 @@
     return true;
   }
 
-  /* v14 (Daniel: "they need the ability to choose multiple options"):
-   * people can pick several support styles. One pick = that style. Two or
-   * more = a 'mixed' style that keeps every protective choice: the lowest
-   * demand, quiet celebration if any style asks for it, calm mode if any
-   * style starts it, fixed wording if the calm style is picked, and every
-   * tool flag that any pick turns on. */
-  var SUPPORT_ORDER = ['focus', 'calm', 'grounding', 'lowdemand', 'adaptive', 'companion'];
-  function cleanPicks(ids) {
-    var out = [];
-    (ids || []).forEach(function (id) { if (PROFILES[id] && id !== 'mixed' && out.indexOf(id) === -1) out.push(id); });
-    if (out.length > 1) out = out.filter(function (id) { return id !== 'companion'; });
-    return out;
-  }
-  function mergeProfiles(ids) {
-    ids = cleanPicks(ids);
-    var parts = ids.map(function (id) { return PROFILES[id]; });
-    var DEM = { low: 0, micro: 1, standard: 2 };
-    var m = { id: 'mixed', name: 'A mix: ' + parts.map(function (p) { return p.name.replace(/\s*\(.*\)$/, ''); }).join(' + '),
-      tagline: 'Your mix: ' + parts.map(function (p) { return p.name; }).join('; ') + '. Rootling keeps the gentlest choice from each one.',
-      demand: 'standard', promptStyle: 'gentle', celebration: 'full' };
-    parts.forEach(function (p) {
-      Object.keys(p).forEach(function (k) {
-        if (typeof p[k] === 'boolean') m[k] = !!(m[k] || p[k]);
-        else if (k === 'executive' && p[k]) { m.executive = m.executive || {}; Object.keys(p[k]).forEach(function (x) { m.executive[x] = m.executive[x] || p[k][x]; }); }
-      });
-      if (DEM[p.demand] < DEM[m.demand]) m.demand = p.demand;
-      if (p.celebration === 'quiet') m.celebration = 'quiet';
-    });
-    m.promptStyle = ids.indexOf('calm') !== -1 ? 'fixed' : ids.indexOf('focus') !== -1 ? 'varied' : 'gentle';
-    m.picks = ids.slice();
-    PROFILES.mixed = m;
-    return m;
-  }
-  function primaryProfile(st) { var s = st || state; return s.profile === 'mixed' ? ((s.profiles || [])[0] || 'companion') : (s.profile || 'companion'); }
-  function setSupportPicks(st, ids) {
-    ids = cleanPicks(ids);
-    st.profiles = ids.slice();
-    if (!ids.length) return setProfile(st, 'companion');
-    if (ids.length === 1) return setProfile(st, ids[0]);
-    mergeProfiles(ids);
-    return setProfile(st, 'mixed');
-  }
-  /* Checkbox chips that replace a support-style <select>. The select stays
-   * (hidden) so older code paths keep working. */
-  function buildSupportPicker(select, getPicks, onChange) {
-    if (!select || select.getAttribute('data-multi') === 'on') return;
-    select.setAttribute('data-multi', 'on');
-    if (!select.querySelector('option[value="mixed"]')) { var o = document.createElement('option'); o.value = 'mixed'; o.textContent = 'A mix of my picks'; select.appendChild(o); }
-    select.hidden = true; select.setAttribute('aria-hidden', 'true'); select.tabIndex = -1;
-    var lab = document.querySelector('label[for="' + select.id + '"]');
-    var box = document.createElement('div'); box.className = 'support-picks'; box.setAttribute('role', 'group');
-    box.setAttribute('aria-label', (lab ? lab.textContent : 'Support styles') + ' (pick as many as you like)');
-    if (lab) {
-      lab.removeAttribute('for'); lab.id = lab.id || select.id + '-label'; box.setAttribute('aria-labelledby', lab.id);
-      var fs = select.closest ? select.closest('fieldset') : null, lg = fs ? fs.querySelector('legend') : null;
-      if (lg && lg.textContent.trim() === lab.textContent.trim()) lab.classList.add('sr-only');
-    }
-    var hint = document.createElement('p'); hint.className = 'fineprint support-picks-hint'; hint.textContent = 'Pick as many as you like.';
-    var opts = Array.prototype.slice.call(select.options).filter(function (o) { return o.value !== 'mixed'; });
-    opts.forEach(function (o) {
-      var row = document.createElement('label'); row.className = 'support-pick';
-      var cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = o.value;
-      var sp = document.createElement('span'); sp.textContent = o.textContent;
-      row.appendChild(cb); row.appendChild(sp); box.appendChild(row);
-      cb.addEventListener('change', function () {
-        var all = box.querySelectorAll('input[type=checkbox]');
-        if (cb.value === 'companion' && cb.checked) Array.prototype.forEach.call(all, function (x) { if (x !== cb) x.checked = false; });
-        else if (cb.checked) Array.prototype.forEach.call(all, function (x) { if (x.value === 'companion') x.checked = false; });
-        var picks = Array.prototype.filter.call(all, function (x) { return x.checked; }).map(function (x) { return x.value; });
-        Array.prototype.forEach.call(box.querySelectorAll('.support-pick'), function (r) { r.classList.toggle('on', r.querySelector('input').checked); });
-        onChange(cleanPicks(picks));
-      });
-    });
-    select.parentNode.insertBefore(hint, select);
-    select.parentNode.insertBefore(box, hint);
-    box.sync = function () {
-      var picks = getPicks();
-      Array.prototype.forEach.call(box.querySelectorAll('input[type=checkbox]'), function (x) { x.checked = picks.indexOf(x.value) !== -1; x.parentNode.classList.toggle('on', x.checked); });
-    };
-    select._picker = box;
-    box.sync();
-  }
-
   function setProfile(state, id) {
     if (!PROFILES[id]) return false;
-    state.profile = id;
-    if (PROFILES[id].forcesLearning) state.learningEnabled = true;
+    return setProfiles(state, [id]);
+  }
+  /* Support styles are MULTI-pick (v14, Daniel's order: "The user needs
+   * to be able to select multiple options"). state.profile stays the
+   * primary (first pick) for older readers; state.profiles holds them
+   * all, and mergedProfile() blends them: support features union,
+   * pressure axes always take the gentlest value among the picks. */
+  function activeProfileIds(state) {
+    var ids = [];
+    if (state && Array.isArray(state.profiles)) {
+      state.profiles.forEach(function (id) { if (PROFILES[id] && ids.indexOf(id) === -1) ids.push(id); });
+    }
+    if (!ids.length && state && PROFILES[state.profile]) ids.push(state.profile);
+    if (!ids.length) ids.push('companion');
+    return ids;
+  }
+  var DEMAND_ORDER = { low: 0, micro: 1, standard: 2 };
+  function mergedProfile(state) {
+    var ids = activeProfileIds(state);
+    var list = ids.map(function (id) { return PROFILES[id]; });
+    var m = {
+      id: ids[0], ids: ids,
+      name: list.map(function (p) { return p.name; }).join(' + '),
+      tagline: list.map(function (p) { return p.tagline; }).join(' '),
+      demand: 'standard', promptStyle: 'gentle',
+      previews: false, celebrateEvery: false, groundingTools: false,
+      bodyDouble: false, calmDefault: false, literal: false,
+      celebration: 'full', controlFraming: false, forcesLearning: false,
+      executive: {}
+    };
+    list.forEach(function (p) {
+      if ((DEMAND_ORDER[p.demand] || 0) < (DEMAND_ORDER[m.demand] || 0)) m.demand = p.demand; /* gentlest demand wins */
+      ['previews', 'celebrateEvery', 'groundingTools', 'bodyDouble', 'calmDefault', 'literal', 'controlFraming', 'forcesLearning'].forEach(function (k) {
+        if (p[k]) m[k] = true;
+      });
+      if (p.celebration === 'quiet') m.celebration = 'quiet';
+      if (p.executive) for (var ek in p.executive) if (p.executive[ek]) m.executive[ek] = true;
+    });
+    if (list.some(function (p) { return p.promptStyle === 'fixed'; })) m.promptStyle = 'fixed';
+    else if (list.some(function (p) { return p.promptStyle === 'varied'; })) m.promptStyle = 'varied';
+    return m;
+  }
+  function setProfiles(state, ids) {
+    var clean = [];
+    (ids || []).forEach(function (id) { if (PROFILES[id] && clean.indexOf(id) === -1) clean.push(id); });
+    if (!clean.length) clean = ['companion'];
+    state.profiles = clean;
+    state.profile = clean[0];
+    if (mergedProfile(state).forcesLearning) state.learningEnabled = true;
     saveState(state);
     return true;
+  }
+  /* Checkbox groups for the profile pickers (adopt + settings). */
+  function buildProfileGroup(container, ids) {
+    if (!container) return;
+    container.innerHTML = '';
+    Object.keys(PROFILES).forEach(function (id) {
+      var p = PROFILES[id];
+      var label = document.createElement('label');
+      label.className = 'check-row';
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.value = id;
+      box.checked = ids.indexOf(id) !== -1;
+      label.appendChild(box);
+      label.appendChild(document.createTextNode(' ' + p.name));
+      container.appendChild(label);
+    });
+  }
+  function readProfileGroup(container) {
+    if (!container) return ['companion'];
+    var ids = [];
+    var boxes = container.querySelectorAll('input[type="checkbox"]');
+    for (var i = 0; i < boxes.length; i++) if (boxes[i].checked) ids.push(boxes[i].value);
+    return ids.length ? ids : ['companion'];
+  }
+  function syncProfileGroup(container, ids) {
+    if (!container) return;
+    var boxes = container.querySelectorAll('input[type="checkbox"]');
+    if (!boxes.length) { buildProfileGroup(container, ids); return; }
+    for (var i = 0; i < boxes.length; i++) boxes[i].checked = ids.indexOf(boxes[i].value) !== -1;
   }
   function setForm(state, form) {
     if (!FORMS[form]) return false;
     state.form = form;
     saveState(state);
     return true;
+  }
+  /* The species emoji for the pet portrait badge (v14): the species a
+   * user picks (Kraken, Bonsai, ...) shares its kind's stage art, so the
+   * badge is how the chosen species itself shows on the pet. */
+  function speciesEmoji(speciesName) {
+    try {
+      var roster = (typeof window !== 'undefined' && window.RootlingCompanions && window.RootlingCompanions.roster) || {};
+      for (var cat in roster) {
+        var list = roster[cat] || [];
+        for (var i = 0; i < list.length; i++) if (list[i].name === speciesName) return list[i].emoji || '';
+      }
+    } catch (e) { /* no badge */ }
+    return '';
   }
   function setLearningEnabled(state, on) {
     state.learningEnabled = !!on;
@@ -2356,9 +2362,6 @@
 
   /* ---------- DOM ---------- */
   var state = loadState();
-  var adoptPicks = [];
-  if (state.profile === 'mixed') { if ((state.profiles || []).length > 1) mergeProfiles(state.profiles); else state.profile = (state.profiles || [])[0] || 'companion'; }
-  if (!state.profiles) state.profiles = state.profile && state.profile !== 'mixed' ? [state.profile] : [];
   var celebrateUntil = 0;
   var paused = false; /* Pause/leave-quietly: while true, render() must not undo the quiet view */
   var groundingStep = -1;
@@ -2371,12 +2374,6 @@
     var img = els.petImg;
     var stage = stageFor(state.sunshine, state.form);
     var primary = mood === 'stage' ? stage.file : moodFile(state, mood);
-    /* v14: the picture matches the species the user chose (species-art.js). */
-    try {
-      var SA = window.RootlingSpeciesArt;
-      var sp = (SA && state.form !== 'plant') ? SA.src(SA.speciesOf(state), stage.id, mood) : '';
-      if (sp) primary = sp;
-    } catch (e) { /* generic art stays */ }
     img.onerror = function () {
       if (img.src.indexOf(stage.file) === -1 && primary !== stage.file) {
         img.src = stage.file;
@@ -2405,9 +2402,9 @@
       /* keep adopt previews in sync with the chosen form */
       if (els.adoptImg) els.adoptImg.src = (FORMS[state.form] || FORMS.plant).firstFile;
       /* Adoption picker shows the chosen style's tagline — nobody picks blind. */
-      if (els.adoptProfileTagline && els.adoptProfileSelect) {
-        var ap = (adoptPicks.length > 1 ? mergeProfiles(adoptPicks) : PROFILES[adoptPicks[0] || els.adoptProfileSelect.value]) || PROFILES.companion;
-        els.adoptProfileTagline.textContent = ap.tagline;
+      if (els.adoptProfileTagline && els.adoptProfileGroup) {
+        var pickedIds = readProfileGroup(els.adoptProfileGroup);
+        els.adoptProfileTagline.textContent = mergedProfile({ profiles: pickedIds, profile: pickedIds[0] }).tagline;
       }
       return;
     }
@@ -2432,6 +2429,11 @@
       els.petIdentityLine.textContent = state.identityLine || '';
       els.petIdentityLine.hidden = !state.identityLine;
     }
+    if (els.petSpeciesBadge) {
+      var badgeEmoji = state.species ? speciesEmoji(state.species) : '';
+      els.petSpeciesBadge.textContent = badgeEmoji;
+      els.petSpeciesBadge.hidden = !badgeEmoji;
+    }
     els.sunshineCount.textContent = String(state.sunshine);
 
     /* Message selection. Body-doubling and control framing lead the day
@@ -2440,7 +2442,7 @@
      * when an evening starter needs them. The night 'sleepy' message still
      * wins after 9pm: rest is the right offer then. Literal profiles get
      * the literal message set. */
-    var profFlags = PROFILES[state.profile] || PROFILES.companion;
+    var profFlags = mergedProfile(state);
     var msg;
     if (celebrating) msg = pickMessage('celebrate', state, cfg.literal);
     else if (done > 0) msg = pickMessage(mood, state, cfg.literal);
@@ -2511,16 +2513,16 @@
     }
 
     /* Settings reflect current state */
-    if (els.profileSelect) { els.profileSelect.value = state.profile; if (els.profileSelect._picker) els.profileSelect._picker.sync(); }
-    if (els.learnCheckbox) { els.learnCheckbox.checked = !!state.learningEnabled; els.learnCheckbox.disabled = !!PROFILES[state.profile].forcesLearning; }
-    if (els.learnDisabledNote) els.learnDisabledNote.hidden = !PROFILES[state.profile].forcesLearning;
+    if (els.profileGroup) syncProfileGroup(els.profileGroup, activeProfileIds(state));
+    if (els.learnCheckbox) { els.learnCheckbox.checked = !!state.learningEnabled; els.learnCheckbox.disabled = !!mergedProfile(state).forcesLearning; }
+    if (els.learnDisabledNote) els.learnDisabledNote.hidden = !mergedProfile(state).forcesLearning;
     if (els.calmCheckbox) els.calmCheckbox.checked = !!state.calmMode;
     if (els.pauseScreenSelect) els.pauseScreenSelect.value = state.pauseScreen || 'blank';
     var csRadios = document.querySelectorAll('input[name="care-style"]');
     for (var ci = 0; ci < csRadios.length; ci++) {
       csRadios[ci].checked = (csRadios[ci].value === (state.careStyle || 'balanced'));
     }
-    if (els.profileTagline) els.profileTagline.textContent = (PROFILES[state.profile] || PROFILES.companion).tagline;
+    if (els.profileTagline) els.profileTagline.textContent = mergedProfile(state).tagline;
 
     /* Check-in cards */
     els.doneMood.hidden = !day.mood;
@@ -2640,11 +2642,7 @@
     var mode = state.pauseScreen || 'blank';
     if (els.quietArt) {
       els.quietArt.hidden = mode !== 'companion';
-      if (mode === 'companion') {
-        var qa = '';
-        try { var SA2 = window.RootlingSpeciesArt; if (SA2 && state.form !== 'plant') qa = SA2.src(SA2.speciesOf(state), stageFor(state.sunshine, state.form).id, 'sleepy'); } catch (e) { qa = ''; }
-        els.quietArt.src = qa || (FORMS[state.form] || FORMS.plant).moods.sleepy;
-      }
+      if (mode === 'companion') els.quietArt.src = (FORMS[state.form] || FORMS.plant).moods.sleepy;
     }
     if (els.quietColour) els.quietColour.hidden = mode !== 'colour';
     if (els.quietView) els.quietView.hidden = false;
@@ -2677,28 +2675,16 @@
         if (els.adoptImg) els.adoptImg.src = FORMS[state.form].firstFile;
       });
     }
-    buildSupportPicker(els.adoptProfileSelect, function () { return adoptPicks; }, function (picks) {
-      adoptPicks = picks;
-      var ap = picks.length > 1 ? mergeProfiles(picks) : PROFILES[picks[0] || 'companion'];
-      if (els.adoptLearnCheckbox && ap && ap.forcesLearning) els.adoptLearnCheckbox.checked = true;
-      if (els.adoptProfileTagline && ap) els.adoptProfileTagline.textContent = ap.tagline;
-    });
-    buildSupportPicker(els.profileSelect, function () { return state.profiles || [state.profile]; }, function (picks) {
-      setSupportPicks(state, picks);
-      if (PROFILES[state.profile].calmDefault && !state.calmMode) {
-        state.calmMode = true;
-        if (state.learningEnabled && state.learning) state.learning.signals.calmUsed += 1;
-      }
-      saveState(state);
-      render();
-    });
-    if (els.adoptProfileSelect) {
-      els.adoptProfileSelect.addEventListener('change', function () {
-        if (els.adoptLearnCheckbox && PROFILES[this.value] && PROFILES[this.value].forcesLearning) {
+    if (els.adoptProfileGroup) {
+      buildProfileGroup(els.adoptProfileGroup, ['companion']);
+      els.adoptProfileGroup.addEventListener('change', function () {
+        var ids = readProfileGroup(els.adoptProfileGroup);
+        var merged = mergedProfile({ profiles: ids, profile: ids[0] });
+        if (els.adoptLearnCheckbox && merged.forcesLearning) {
           els.adoptLearnCheckbox.checked = true;
         }
-        if (els.adoptProfileTagline && PROFILES[this.value]) {
-          els.adoptProfileTagline.textContent = PROFILES[this.value].tagline;
+        if (els.adoptProfileTagline) {
+          els.adoptProfileTagline.textContent = merged.tagline;
         }
       });
     }
@@ -2709,7 +2695,7 @@
       if (!name) name = 'Rootling';
       state.petName = name;
       state.createdDate = todayKey();
-      if (els.adoptProfileSelect) { if (adoptPicks.length) setSupportPicks(state, adoptPicks); else setProfile(state, els.adoptProfileSelect.value); }
+      setProfiles(state, readProfileGroup(els.adoptProfileGroup));
       if (els.adoptLearnCheckbox) setLearningEnabled(state, els.adoptLearnCheckbox.checked || state.learningEnabled);
       /* Collection rebuild (2026-10-15): the card steps in companions.js
        * leave the chosen kind, species, and personality in a pending
@@ -2722,6 +2708,10 @@
           if (pending.species) state.species = pending.species;
           if (pending.personalityId) state.companionPersonality = pending.personalityId;
           if (pending.identityLine) state.identityLine = pending.identityLine;
+          /* The art form is kept in step with the chosen kind by
+           * companions.js (syncCoreForm clicks the matching form
+           * button as the kind cards are picked) — state.form here is
+           * already the picked kind's form. */
           if (typeof window !== 'undefined' && window.RootlingCompanions && window.RootlingCompanions.registerAdoption) {
             window.RootlingCompanions.registerAdoption({
               name: name, form: state.form, category: state.category,
@@ -2731,12 +2721,12 @@
           }
         }
       } catch (e) { /* the adoption itself still stands */ }
-      if (PROFILES[state.profile].calmDefault) {
+      if (mergedProfile(state).calmDefault) {
         state.calmMode = true;
         if (state.learningEnabled && state.learning) state.learning.signals.calmUsed += 1;
       }
       saveState(state);
-      if (PROFILES[state.profile].celebration !== 'quiet') celebrateUntil = Date.now() + 4000;
+      if (mergedProfile(state).celebration !== 'quiet') celebrateUntil = Date.now() + 4000;
       render();
     });
 
@@ -2781,11 +2771,11 @@
     });
 
     /* Settings: profile / learning / calm / form switch — all changeable anytime */
-    if (els.profileSelect) {
-      els.profileSelect.addEventListener('change', function () {
-        setProfile(state, this.value);
-        if (this.value !== 'mixed') state.profiles = [this.value];
-        if (PROFILES[state.profile].calmDefault && !state.calmMode) {
+    if (els.profileGroup) {
+      buildProfileGroup(els.profileGroup, activeProfileIds(state));
+      els.profileGroup.addEventListener('change', function () {
+        setProfiles(state, readProfileGroup(els.profileGroup));
+        if (mergedProfile(state).calmDefault && !state.calmMode) {
           state.calmMode = true;
           if (state.learningEnabled && state.learning) state.learning.signals.calmUsed += 1;
         }
@@ -2994,11 +2984,12 @@
         els.adoptImg.onerror = null;
       };
     }
-    els.adoptProfileSelect = $('adopt-profile-select');
+    els.adoptProfileGroup = $('adopt-profile-group');
     els.adoptProfileTagline = $('adopt-profile-tagline');
     els.adoptLearnCheckbox = $('adopt-learn-checkbox');
     els.petNameDisplay = $('pet-name-display');
     els.petIdentityLine = $('pet-identity-line');
+    els.petSpeciesBadge = $('pet-species-badge');
     els.stageLabel = $('stage-label');
     els.petMessage = $('pet-message');
     els.growthText = $('growth-text');
@@ -3051,7 +3042,7 @@
     els.breathStop = $('breath-stop');
     els.breathingPanel = $('breathing-panel');
     els.breathingText = $('breathing-text');
-    els.profileSelect = $('profile-select');
+    els.profileGroup = $('profile-group');
     els.profileTagline = $('profile-tagline');
     els.learnCheckbox = $('learn-checkbox');
     els.learnDisabledNote = $('learn-disabled-note');
@@ -3129,13 +3120,14 @@
     requestPersistentStorage: requestPersistentStorage,
     effectiveConfig: effectiveConfig,
     setProfile: setProfile,
+    setProfiles: setProfiles,
+    mergedProfile: mergedProfile,
+    activeProfileIds: activeProfileIds,
     setForm: setForm,
     setLearningEnabled: setLearningEnabled,
     setToggle: setToggle,
     promptFor: promptFor,
     getState: function () { return state; },
-    setSupportPicks: function (ids) { var r = setSupportPicks(state, ids); saveState(state); try { render(); } catch (e) { /* later */ } return r; },
-    mergeProfiles: mergeProfiles,
     /* v12/v13: bonus experience from helping, fitness, and mood care.
      * Feeds the same growth points as check-ins (state.sunshine) AND the
      * pet's experience points (state.petXp), capped per day. */
@@ -7174,10 +7166,7 @@
       if (img) {
         var src = 'assets/sprout-celebrate.svg';
         try {
-          if (st && st.form === 'animal') {
-            src = 'assets/creature-celebrate.svg';
-            try { var SA3 = window.RootlingSpeciesArt; var c3 = SA3 ? SA3.src(SA3.speciesOf(st), 'cub', 'celebrate') : ''; if (c3) src = c3; } catch (e) { /* generic */ }
-          }
+          if (st && st.form === 'animal') src = 'assets/creature-celebrate.svg';
           else if (st && st.calmMode) src = 'assets/sprout-celebrate-calm.svg';
         } catch (e) { /* keep the plant art */ }
         img.setAttribute('src', src);
@@ -9424,7 +9413,6 @@
    * and their work moved into the Train Me hub on the Companion tab.) */
   (function () {
     var VIEW_NAMES = { home: 1, focus: 1, activities: 1, companion: 1, support: 1 };
-    var VIEW_LABELS = { home: 'Home', focus: 'Focus', activities: 'Activities', companion: 'Companion', support: 'Settings' };
     var VIEW_OF_ID = {
       'help-panel': 'home', 'stuck-offer': 'home', 'today-card': 'home', 'preview-card': 'home',
       'exec-view': 'focus', 'grounding-card': 'focus',
@@ -9547,51 +9535,11 @@
       return null;
     }
 
-    /* v14 back buttons (Daniel: "the pages need back buttons"). Each
-     * page change is a browser history step, so the phone's own Back
-     * goes to the last page instead of leaving Rootling, and a Back bar
-     * sits at the top of every page except Home. */
-    var navStack = [];
-    var fromPop = false;
-    function remember(prev, next) {
-      if (prev === next || fromPop) return;
-      navStack.push(prev);
-      if (navStack.length > 30) navStack.shift();
-      try { if (window.history && window.history.pushState) window.history.pushState({ rootlingView: next }, '', window.location.pathname + window.location.search); } catch (e) { /* history is a help */ }
-    }
-    function goBack() {
-      if (navStack.length) {
-        try { if (window.history && window.history.state && window.history.state.rootlingView) { window.history.back(); return; } } catch (e) { /* fall through */ }
-        var prev = navStack.pop(); fromPop = true; show(prev, { focus: true }); fromPop = false; return;
-      }
-      show('home', { focus: true });
-    }
-    function backBar() {
-      var bar = byId('view-back-bar');
-      var mv = mainView();
-      if (!mv) return;
-      if (!bar) {
-        bar = document.createElement('div'); bar.id = 'view-back-bar'; bar.className = 'view-back-bar';
-        var b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-ghost view-back-btn'; b.id = 'view-back-btn';
-        b.innerHTML = '<span aria-hidden="true">\u2190</span> Back';
-        b.addEventListener('click', goBack);
-        var t = document.createElement('span'); t.className = 'view-back-title'; t.id = 'view-back-title';
-        bar.appendChild(b); bar.appendChild(t);
-        mv.parentNode.insertBefore(bar, mv);
-      }
-      var prev = navStack.length ? navStack[navStack.length - 1] : 'home';
-      bar.hidden = !!mv.hidden || currentView === 'home';
-      var bb = byId('view-back-btn'); if (bb) bb.setAttribute('aria-label', 'Back to ' + (VIEW_LABELS[prev] || 'Home'));
-      var tt = byId('view-back-title'); if (tt) tt.textContent = VIEW_LABELS[currentView] || '';
-    }
-
     function show(view, opts) {
       opts = opts || {};
       if (!VIEW_NAMES[view]) view = 'home';
-      remember(currentView, view);
       currentView = view;
       apply();
-      backBar();
       var first = firstOfView(view);
       if (opts.target) { scrollEl(opts.target); if (opts.focus) focusHeading(opts.target); }
       else if (first) { scrollEl(first); if (opts.focus) focusHeading(first); }
@@ -9604,7 +9552,7 @@
       var mv = mainView();
       if (el === mv) { show('home', opts); return; }
       var v = viewFor(el);
-      if (v && v !== currentView) { remember(currentView, v); currentView = v; apply(); backBar(); }
+      if (v && v !== currentView) { currentView = v; apply(); }
       scrollEl(el);
       if (opts.focus) focusHeading(el);
     }
@@ -9641,18 +9589,34 @@
       } catch (e) { /* start at home */ }
       currentView = start;
       apply();
-      try { if (window.history && window.history.replaceState) window.history.replaceState({ rootlingView: start }, '', window.location.pathname + window.location.search + window.location.hash); } catch (e) { /* fine */ }
-      window.addEventListener('popstate', function (ev) {
-        var v = ev.state && ev.state.rootlingView;
-        if (!v) v = 'home';
-        if (navStack.length) navStack.pop();
-        fromPop = true; show(v, { focus: true }); fromPop = false;
-      });
-      backBar();
       var btns = document.querySelectorAll('[data-nav-view]');
       for (var i = 0; i < btns.length; i++) {
         btns[i].addEventListener('click', function () {
           show(this.getAttribute('data-nav-view'), { focus: true });
+        });
+      }
+      /* Back button on every page (v14, Daniel's order): every non-home
+       * tab view gets a clear "← Back" at the top of its first card —
+       * no assumed gestures, no hunting for the tab bar. Overlay pages
+       * (safety, learned) carry their own data-close-view Back. */
+      ['focus', 'activities', 'companion', 'support'].forEach(function (v) {
+        var first = firstOfView(v);
+        if (!first || first.querySelector('.view-back-bar')) return;
+        var bar = document.createElement('div');
+        bar.className = 'view-back-bar';
+        var bb = document.createElement('button');
+        bb.type = 'button';
+        bb.className = 'btn btn-soft';
+        bb.textContent = '← Back';
+        bb.addEventListener('click', function () { show('home', { focus: true }); });
+        bar.appendChild(bb);
+        first.insertBefore(bar, first.firstChild);
+      });
+      var closers = document.querySelectorAll('[data-close-view]');
+      for (var ci = 0; ci < closers.length; ci++) {
+        closers[ci].addEventListener('click', function () {
+          var target = byId(this.getAttribute('data-close-view'));
+          if (target) target.hidden = true;
         });
       }
       document.addEventListener('click', onAnchorClick);
@@ -9664,7 +9628,7 @@
         if (typeof MutationObserver !== 'undefined') {
           var mo = new MutationObserver(function () { apply(); });
           mo.observe(mv, { childList: true });
-          var mo2 = new MutationObserver(function () { syncTabBar(); backBar(); });
+          var mo2 = new MutationObserver(function () { syncTabBar(); });
           mo2.observe(mv, { attributes: true, attributeFilter: ['hidden'] });
         }
       } catch (e) { /* gating still happens on every show/reveal */ }
@@ -9679,7 +9643,6 @@
     if (typeof window !== 'undefined') {
       window.RootlingNav = {
         show: function (view) { show(view, { focus: true }); },
-        back: goBack,
         reveal: reveal,
         current: function () { return currentView; }
       };

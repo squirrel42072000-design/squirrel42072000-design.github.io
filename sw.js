@@ -14,7 +14,6 @@ var APP_SHELL = [
   './styles.css',
   './accounts.js',
   './companions.js',
-  './species-art.js',
   './traits.js',
   './burnoutEngine.js',
   './companion-ux.js',

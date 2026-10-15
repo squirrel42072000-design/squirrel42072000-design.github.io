@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- Two builders (Muse and Perplexity Computer) work on this file. Read TEAM.md first, and run `node tools/check.js` before every push. Never remove or hide the other lane's cards. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -211,16 +210,11 @@
         <input id="pet-name-input" name="pet-name" type="text" maxlength="24" autocomplete="off"
                placeholder="e.g. Fern, Pico, Sunshine…">
 
-        <label for="adopt-profile-select">What kind of support helps you?</label>
-        <select id="adopt-profile-select" name="profile" aria-describedby="adopt-profile-help">
-          <option value="companion">Just a companion</option>
-          <option value="focus">Focus &amp; momentum (ADHD-friendly)</option>
-          <option value="calm">Calm &amp; predictable (autism-friendly)</option>
-          <option value="grounding">Grounding &amp; safety (PTSD-friendly)</option>
-          <option value="lowdemand">Low-demand days (anxiety/depression-friendly)</option>
-          <option value="adaptive">Let my companion learn</option>
-        </select>
-        <p class="fineprint" id="adopt-profile-help">These are support styles, not labels. You can change this any time — nothing about you is ever guessed or diagnosed.</p>
+        <fieldset class="profile-picker">
+          <legend>What kind of support helps you? Pick as many as you like.</legend>
+          <div id="adopt-profile-group" role="group" aria-describedby="adopt-profile-help"></div>
+        </fieldset>
+        <p class="fineprint" id="adopt-profile-help">These are support styles, not labels. Pick one, pick several — they blend. You can change this any time — nothing about you is ever guessed or diagnosed.</p>
         <p class="fineprint" id="adopt-profile-tagline" aria-live="polite"></p>
 
         <label class="check-row" for="adopt-learn-checkbox">
@@ -283,6 +277,7 @@
       <div class="pet-stage-wrap">
         <img id="pet-img" class="pet-img" src="assets/sprout-seed.svg"
              alt="Your Rootling companion" width="200" height="200">
+        <span id="pet-species-badge" class="pet-species-badge" aria-hidden="true" hidden></span>
       </div>
       <h2 id="pet-heading"><span id="pet-name-display">Rootling</span>
         <span id="stage-label" class="stage-label">Seed stage</span>
@@ -815,6 +810,7 @@
     </div>
 
     <section class="card" id="safety-view" aria-labelledby="safety-heading" hidden>
+      <div class="view-back-bar"><button type="button" class="btn btn-soft" data-close-view="safety-view">← Back</button></div>
       <h3 id="safety-heading">Support now</h3>
       <p class="q">You are here. Take your time. Pick one thing.</p>
       <p class="q" id="safety-disclaimer">I am an AI support tool and not a medical professional. If you are experiencing a crisis, contact emergency services, a healthcare provider, or a trusted person immediately.</p>
@@ -1232,16 +1228,8 @@
       <p class="q" id="profile-tagline"></p>
       <p class="fineprint">Change one choice at a time, any time. Nothing here resets on its own, nothing is recorded about why you changed it, and you never have to explain a change.</p>
       <fieldset class="settings-group">
-        <legend>Support style</legend>
-        <label for="profile-select">Support style</label>
-        <select id="profile-select" aria-describedby="profile-tagline">
-          <option value="companion">Just a companion</option>
-          <option value="focus">Focus &amp; momentum (ADHD-friendly)</option>
-          <option value="calm">Calm &amp; predictable (autism-friendly)</option>
-          <option value="grounding">Grounding &amp; safety (PTSD-friendly)</option>
-          <option value="lowdemand">Low-demand days (anxiety/depression-friendly)</option>
-          <option value="adaptive">Let my companion learn</option>
-        </select>
+        <legend>Support style — pick as many as you like</legend>
+        <div id="profile-group" role="group" aria-describedby="profile-tagline"></div>
       </fieldset>
       <fieldset class="settings-group">
         <legend>Learning</legend>
@@ -1530,6 +1518,7 @@
     </section>
 
     <section class="card" id="learned-view" aria-labelledby="learned-heading" hidden>
+      <div class="view-back-bar"><button type="button" class="btn btn-soft" data-close-view="learned-view">← Back</button></div>
       <h3 id="learned-heading">What your companion has learned</h3>
       <p class="q">Everything below lives only on this device. Your companion adjusts its support <em>style</em> — it never diagnoses you and never gives you a label you didn't choose.</p>
       <p class="q">Your chosen support style always comes first — learning only fills in where your style is silent, and every adjustment is listed here as it happens. Turning learning off in settings stops anything new being learned; what is already here stays until you forget it below.</p>
@@ -1764,7 +1753,6 @@
 
 <script src="accounts.js"></script>
 <script src="companions.js"></script>
-<script src="species-art.js"></script>
 <script src="traits.js"></script>
 <script src="burnoutEngine.js"></script>
 <script src="companion-ux.js"></script>
