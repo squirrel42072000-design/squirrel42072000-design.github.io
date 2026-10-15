@@ -19,7 +19,7 @@
    * NOT exported — it is this device's own request state, not data. */
   var MODULE_STORE_KEYS = ['rootling-appearance-v1', 'rootling-exec-v1',
     'rootling-well-v1', 'rootling-consent-v1', 'rootling-social-v1',
-    'rootling-time-v1', 'rootling-memorybook-v1', 'rootling-assistant-v1', 'rootling-fitness-v1'];
+    'rootling-time-v1', 'rootling-memorybook-v1'];
   /* Soft warning line, not a cap: localStorage origins are commonly
    * limited to roughly 5 MB, so at ~4 MB of stored memory the app tells
    * the user and offers an export first. Nothing is dropped at this line
@@ -413,7 +413,46 @@
     }
     computeSupportNeeds(state, now);
     computeBurnout(state, now);
+    computeReflections(state, now);
     return ad;
+  }
+
+  /* Reflections (v11): weekly + monthly "your pet noticed" snapshots
+   * (trust.buildReflection over real counts). One snapshot per period,
+   * replaced as the period goes on; the Learned view speaks the latest. */
+  function computeReflections(state, now) {
+    var trustL = (typeof window !== 'undefined' && window.ROOTLING_TRUST) || null;
+    if (!trustL) return;
+    if (!state.learning.reflections) state.learning.reflections = { weeklyKey: '', weekly: null, monthlyKey: '', monthly: null };
+    var facts = execFacts();
+    var sn = state.learning.supportNeeds;
+    var topName = null;
+    if (sn && sn.top && sn.top.length && typeof window !== 'undefined' && window.ROOTLING_SUPPORT) {
+      var sup = window.ROOTLING_SUPPORT.supportById(sn.top[0]);
+      if (sup) topName = sup.name;
+    }
+    var worstType = null, worstCount = 0;
+    for (var t in (state.learning.signals.skippedDays || {})) {
+      if (state.learning.signals.skippedDays[t] > worstCount) { worstCount = state.learning.signals.skippedDays[t]; worstType = t; }
+    }
+    var stats = {
+      completedTasks: facts.dones.length,
+      careDays: state.careDays.length,
+      bestTimeLabel: (ad2bestHour(state) !== null) ? hourLabel(ad2bestHour(state)) : null,
+      topSupportName: topName,
+      topChallenge: worstType ? ('the ' + (TYPE_NAMES[worstType] || worstType) + ' check-in') : null,
+      stepsWeek: stepsInLastDays(state, 7)
+    };
+    var key = todayKey(now);
+    var monthKey = key.slice(0, 7);
+    var weekKey = 'w-' + shiftKey(key, -(((now.getDay() + 6) % 7)));
+    var R = state.learning.reflections;
+    R.weeklyKey = weekKey; R.weekly = trustL.buildReflection(stats, 'This week');
+    R.monthlyKey = monthKey; R.monthly = trustL.buildReflection(stats, 'This month');
+  }
+  function ad2bestHour(state) {
+    var ad = state.learning && state.learning.adaptations;
+    return ad && ad.bestHour !== undefined ? ad.bestHour : null;
   }
 
   /* Support-needs model (traits.js, installed v9 from Daniel's research
@@ -442,12 +481,57 @@
       fixedPrompts: state.learning.adaptations.promptStyle === 'fixed'
     });
     var top = lib.topSupports(scores, 3);
+    /* Topic boost (v12): supports matching a topic the user declared
+     * ("Things you live with") are offered more often — the best
+     * matching support takes the last top slot if it is not already
+     * there. User-chosen help, never an inference about the person. */
+    var userTopics = Array.isArray(state.topics) ? state.topics : [];
+    if (userTopics.length && top.length) {
+      var inTop = {};
+      top.forEach(function (r) { inTop[r.id] = 1; });
+      var bestTopic = null, bestTopicScore = -1;
+      lib.SUPPORTS.forEach(function (s) {
+        if (!s.topics || inTop[s.id]) return;
+        var match = s.topics.some(function (tp) { return userTopics.indexOf(tp) !== -1; });
+        if (!match) return;
+        var sc = 0;
+        for (var dm in s.dims) if (typeof scores[dm] === 'number') sc += scores[dm] * s.dims[dm];
+        if (sc > bestTopicScore) { bestTopicScore = sc; bestTopic = s; }
+      });
+      if (bestTopic) top[top.length - 1] = { id: bestTopic.id, total: bestTopicScore };
+    }
+    /* Explainability + confidence (v11): every score carries the plain
+     * reasons it came from and a confidence value (trust.js formula;
+     * displayed to the user as words only). Reasons are the actual
+     * counted signals — never invented. */
+    var trustL = (typeof window !== 'undefined' && window.ROOTLING_TRUST) || null;
+    var completionRate = (done + skippedTotal) > 0 ? done / (done + skippedTotal) : 0;
+    var reasons = {
+      executive: ['Check-ins finished: ' + done + ' so far.'],
+      feelings: ['Calm or grounding tools used: ' + ((sig.calmUsed || 0) + (sig.groundingUsed || 0)) + ' times.'],
+      sensory: ['Calm or grounding tools used: ' + ((sig.calmUsed || 0) + (sig.groundingUsed || 0)) + ' times.'],
+      routine: ['Days observed: ' + (sig.daysObserved || 0) + '.'],
+      attention: [],
+      social: []
+    };
+    if (skippedTotal > 0) reasons.executive.push('Check-ins skipped: ' + skippedTotal + '.');
+    if (((sig.skippedDays || {}).mood || 0) > 0) reasons.feelings.push('Feelings check-ins skipped: ' + sig.skippedDays.mood + '.');
+    var confidence = {};
+    ['executive', 'feelings', 'sensory', 'routine', 'attention', 'social'].forEach(function (dim) {
+      if (typeof scores[dim] !== 'number') { confidence[dim] = null; return; }
+      var obs = dim === 'routine' ? (sig.daysObserved || 0)
+        : dim === 'executive' ? (done + skippedTotal)
+        : ((sig.calmUsed || 0) + (sig.groundingUsed || 0));
+      confidence[dim] = trustL ? trustL.calculateConfidence(obs, dim === 'executive' ? completionRate : 0.6) : null;
+    });
     var prev = state.learning.supportNeeds;
     var oldTop = prev && prev.top && prev.top.length ? prev.top[0] : null;
     state.learning.supportNeeds = {
       scores: scores,
       top: top.map(function (r) { return r.id; }),
-      date: todayKey(now)
+      date: todayKey(now),
+      reasons: reasons,
+      confidence: confidence
     };
     var newTop = top.length ? top[0].id : null;
     if (newTop && newTop !== oldTop) {
@@ -573,6 +657,7 @@
       for (var f = 0; f < fresh.length; f++) {
         cel.seenDone.push(fresh[f].id);
         cel.doneCount += 1;
+        state.petXp = (state.petXp || 0) + 15; /* pet experience: it helped finish a thing */
         var ageDays = fresh[f].createdAt ? Math.floor((now.getTime() - fresh[f].createdAt) / 86400000) : 0;
         var lines = ux.checkCelebrations({
           firstFinish: wasEmpty && f === 0,
@@ -656,6 +741,7 @@
     if (!picked && csSteps.length) picked = csSteps[0];
     if (!state.cantStart) state.cantStart = { uses: 0, styles: {} };
     state.cantStart.uses += 1;
+    state.petXp = (state.petXp || 0) + 5; /* pet experience: it helped shrink a task */
     if (picked) state.cantStart.styles[picked] = (state.cantStart.styles[picked] || 0) + 1;
     saveState(state);
     if (msg) msg.textContent = 'Good. Just do that: ' + picked + '. Nothing else. Your pet is with you.';
@@ -701,6 +787,7 @@
     var card = gel('brief-card');
     if (!card || !state.petName) return;
     initV10();
+    initV11();
     now = now || new Date();
     var ux = uxLib();
     var facts = execFacts();
@@ -765,6 +852,687 @@
     }
   }
 
+  /* ================= v11: AI access, pet chat + orders, memory search,
+   * connected accounts =================
+   * The pet's intelligence has two lanes: the local brain (pet-brain.js —
+   * orders + on-device answers, always available, fully private) and the
+   * AI engine behind the connected layer (richer answers, only when the
+   * user signed in, connected, and Privacy Mode is off — and even then,
+   * only the data the AI Access matrix grants that provider). */
+
+  var SUPABASE_URL = 'https://gfjrzqlmtqzimgjgeacv.supabase.co';
+  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdmanJ6cWxtdHF6aW1namdlYWN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwOTczMTUsImV4cCI6MjEwNzY3MzMxNX0.SaW9qN3QmMYxCdjJgRcNRECzjEZBO6HsjAHjMYre1F4';
+
+  /* ---------- AI Access Controls (trust.js matrix, persisted) ---------- */
+  var AI_ACCESS_KEY = 'rootling-ai-access-v1';
+  var aiAccess = null;
+  function loadAiAccess() {
+    if (aiAccess) return aiAccess;
+    var trustL = (typeof window !== 'undefined' && window.ROOTLING_TRUST) || null;
+    var fallback = { matrix: trustL ? trustL.defaultPermissions() : {}, privacyMode: false, audit: [] };
+    try {
+      var raw = localStorage.getItem(AI_ACCESS_KEY);
+      if (raw) { var parsed = JSON.parse(raw); if (parsed && parsed.matrix) { aiAccess = parsed; return aiAccess; } }
+    } catch (e) { /* fresh defaults below */ }
+    aiAccess = fallback;
+    return aiAccess;
+  }
+  function saveAiAccess() {
+    try { localStorage.setItem(AI_ACCESS_KEY, JSON.stringify(aiAccess)); } catch (e) { /* storage full/blocked: session still works */ }
+  }
+  function canAi(resource, provider) {
+    var a = loadAiAccess();
+    if (a.privacyMode && provider !== 'companion' && provider !== 'local') return false;
+    var trustL = (typeof window !== 'undefined' && window.ROOTLING_TRUST) || null;
+    if (trustL) return trustL.canAIAccessSafe(a.matrix, resource, provider);
+    return !!(a.matrix[resource] && a.matrix[resource][provider]);
+  }
+  function renderAiAccess() {
+    var grid = gel('ai-access-grid');
+    if (!grid) return;
+    var trustL = (typeof window !== 'undefined' && window.ROOTLING_TRUST) || null;
+    if (!trustL) { grid.innerHTML = ''; return; }
+    var a = loadAiAccess();
+    var toggle = gel('privacy-mode-toggle');
+    if (toggle) toggle.checked = !!a.privacyMode;
+    grid.innerHTML = '';
+    trustL.RESOURCES.forEach(function (resource) {
+      var row = document.createElement('div');
+      row.className = 'ai-access-row';
+      var title = document.createElement('strong');
+      title.textContent = trustL.RESOURCE_NAMES[resource];
+      row.appendChild(title);
+      trustL.PROVIDERS.forEach(function (provider) {
+        var label = document.createElement('label');
+        label.className = 'ai-access-cell';
+        var box = document.createElement('input');
+        box.type = 'checkbox';
+        box.checked = !!a.matrix[resource][provider];
+        var locked = trustL.classificationOf(resource) === 'critical' && ['copilot', 'gemini', 'openai'].indexOf(provider) !== -1;
+        if (locked) { box.disabled = true; box.checked = false; label.title = 'This kind of data can never be given to outside AIs.'; }
+        if (a.privacyMode && ['copilot', 'gemini', 'openai'].indexOf(provider) !== -1) box.disabled = true;
+        box.setAttribute('aria-label', trustL.PROVIDER_NAMES[provider] + ' can view ' + trustL.RESOURCE_NAMES[resource]);
+        box.addEventListener('change', function () {
+          a.matrix[resource][provider] = box.checked;
+          a.audit.push({ at: Date.now(), resource: resource, provider: provider, value: box.checked });
+          if (a.audit.length > 100) a.audit = a.audit.slice(-100);
+          saveAiAccess();
+          renderAiAccess();
+          syncAiPermission(resource, provider, box.checked);
+        });
+        label.appendChild(box);
+        label.appendChild(document.createTextNode(' ' + trustL.PROVIDER_NAMES[provider]));
+        row.appendChild(label);
+      });
+      grid.appendChild(row);
+    });
+    var auditEl = gel('ai-access-audit');
+    if (auditEl) {
+      var last = a.audit[a.audit.length - 1];
+      auditEl.textContent = last
+        ? 'Last change: ' + trustL.PROVIDER_NAMES[last.provider] + (last.value ? ' can now view ' : ' cannot view ') + trustL.RESOURCE_NAMES[last.resource] + '. Every change is written down.'
+        : 'No changes yet. Every change you make here is written down.';
+    }
+  }
+
+  /* ---------- Memory search (Ask Memory) ---------- */
+  var STOPWORDS = ['when', 'did', 'what', 'the', 'was', 'you', 'your', 'ask', 'memory', 'about', 'that', 'this', 'have', 'with', 'from'];
+  function searchMemory(query) {
+    var terms = String(query || '').toLowerCase().split(/[^a-z0-9]+/).filter(function (w) { return w.length >= 3 && STOPWORDS.indexOf(w) === -1; });
+    if (!terms.length) return [];
+    var hits = [];
+    function matches(text) {
+      var low = ' ' + String(text || '').toLowerCase() + ' ';
+      for (var i = 0; i < terms.length; i++) if (low.indexOf(terms[i]) !== -1) return true;
+      return false;
+    }
+    if (state.learning && state.learning.log) {
+      state.learning.log.forEach(function (entry) {
+        if (matches(entry.text)) hits.push('On ' + entry.date + ', your pet noted: ' + entry.text);
+      });
+    }
+    try {
+      var rawMb = localStorage.getItem('rootling-memorybook-v1');
+      if (rawMb) {
+        var seen = {};
+        (function walk(node, depth) {
+          if (!node || depth > 4 || hits.length > 12) return;
+          if (typeof node === 'string') {
+            if (node.length > 12 && matches(node) && !seen[node]) { seen[node] = 1; hits.push('From your memory book: ' + node.slice(0, 200)); }
+            return;
+          }
+          if (Array.isArray(node)) { node.forEach(function (n) { walk(n, depth + 1); }); return; }
+          if (typeof node === 'object') { for (var k in node) walk(node[k], depth + 1); }
+        })(JSON.parse(rawMb), 0);
+      }
+    } catch (e) { /* memory book unreadable: learned notes still searched */ }
+    return hits.slice(0, 6);
+  }
+
+  /* ---------- Pet chat + orders ---------- */
+  var CHAT_KEY = 'rootling-chat-v1';
+  var chatLog = null;
+  function loadChat() {
+    if (chatLog) return chatLog;
+    try {
+      var raw = localStorage.getItem(CHAT_KEY);
+      if (raw) { var p = JSON.parse(raw); if (p && Array.isArray(p.messages)) { chatLog = p; return chatLog; } }
+    } catch (e) { /* fresh below */ }
+    chatLog = { messages: [] };
+    return chatLog;
+  }
+  function saveChat() {
+    try {
+      var c = loadChat();
+      if (c.messages.length > 100) c.messages = c.messages.slice(-100);
+      localStorage.setItem(CHAT_KEY, JSON.stringify(c));
+    } catch (e) { /* session-only chat is fine */ }
+  }
+  function renderChat() {
+    var log = gel('chat-log');
+    if (!log) return;
+    var c = loadChat();
+    log.innerHTML = '';
+    if (!c.messages.length) {
+      var p0 = document.createElement('p');
+      p0.className = 'chat-line';
+      p0.textContent = (state.petName || 'Your pet') + ': Hello! Tell me an order, like "Check my email", or ask me anything.';
+      log.appendChild(p0);
+      return;
+    }
+    c.messages.slice(-30).forEach(function (m) {
+      var p = document.createElement('p');
+      p.className = 'chat-line';
+      var who = document.createElement('strong');
+      who.textContent = m.role === 'user' ? 'You: ' : (state.petName || 'Pet') + ': ';
+      p.appendChild(who);
+      p.appendChild(document.createTextNode(m.text));
+      log.appendChild(p);
+    });
+    log.scrollTop = log.scrollHeight;
+  }
+  function pushChat(role, text) {
+    loadChat().messages.push({ role: role, text: text, at: Date.now() });
+    saveChat();
+    renderChat();
+  }
+  function chatFacts() {
+    var facts = execFacts();
+    var day = state.checkins[todayKey()] || {};
+    var ux = uxLib();
+    var band = (state.learning && state.learning.burnout) ? state.learning.burnout.band : 'green';
+    var help = ux ? ux.whatWouldHelp({ band: band, openLoops: facts.openLoops, nextText: facts.nextText }) : null;
+    return {
+      nextText: facts.nextText,
+      doneTypes: typesDone(day),
+      momentumWord: ux ? ux.momentumWords(ux.momentumScore({ completedToday: (state.celebration || {}).doneCount || 0, openLoops: facts.openLoops })) : '',
+      helpText: help ? help.text : '',
+      helpWhy: help ? help.why : '',
+      stepsToday: stepsToday(),
+      stepsGoal: fitnessStore().goal,
+      timeText: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    };
+  }
+  function explainFor(query) {
+    if (typeof window === 'undefined' || !window.ROOTLING_SUPPORT || !window.ROOTLING_BRAIN) return '';
+    var q = String(query || '').toLowerCase();
+    var all = window.ROOTLING_SUPPORT.SUPPORTS || [];
+    for (var i = 0; i < all.length; i++) {
+      if (q.indexOf(all[i].name.toLowerCase()) !== -1 || q.indexOf(all[i].id.replace(/-/g, ' ')) !== -1) {
+        return all[i].name + ': ' + all[i].line + ' ' + window.ROOTLING_BRAIN.evWords(all[i].evidence);
+      }
+    }
+    var sn = state.learning && state.learning.supportNeeds;
+    if (sn && sn.top && sn.top.length) {
+      var top = window.ROOTLING_SUPPORT.supportById(sn.top[0]);
+      if (top) return 'Right now the help that fits you most is "' + top.name + '": ' + top.line + ' ' + window.ROOTLING_BRAIN.evWords(top.evidence);
+    }
+    return '';
+  }
+  var MOOD_NAMES = { 1: 'Rough', 2: 'Low', 3: 'Okay', 4: 'Good', 5: 'Great' };
+
+  function sendChat(text) {
+    var brain = (typeof window !== 'undefined' && window.ROOTLING_BRAIN) || null;
+    if (!brain || !text) return;
+    pushChat('user', text);
+    var intent = brain.parseIntent(text);
+    if (intent.kind === 'crisis') { pushChat('pet', brain.localReply(intent, {})); return; }
+    if (intent.kind === 'log-mood') {
+      afterCheckin(applyCheckin(state, 'mood', { value: intent.moodValue }));
+      pushChat('pet', 'Logged how you feel: ' + (MOOD_NAMES[intent.moodValue] || 'Okay') + '. Thank you for telling me.');
+      return;
+    }
+    if (intent.kind === 'log-water') { /* amount-aware (v12 commands) */
+      var wday = state.checkins[todayKey()] || {};
+      var wcur = wday.water ? wday.water.glasses : 0;
+      afterCheckin(applyCheckin(state, 'water', { glasses: wcur + (intent.amount || 1) }));
+      pushChat('pet', 'Logged: ' + (intent.amount || 1) + ' glass(es) of water. Nice — your body thanks you.');
+      return;
+    }
+    if (intent.kind === 'log-steps') {
+      addSteps(intent.amount || 500);
+      pushChat('pet', 'Logged ' + (intent.amount || 500) + ' steps. Today you are at ' + stepsToday() + '. Every step counts.');
+      return;
+    }
+    if (intent.kind === 'log-exercise') {
+      afterCheckin(applyCheckin(state, 'movement', { level: 'little' }));
+      addSteps(800);
+      pushChat('pet', 'Logged: movement. I added about 800 steps for the walk. Lovely moving.');
+      return;
+    }
+    if (intent.kind === 'log-sleep') {
+      if (intent.hours) {
+        afterCheckin(applyCheckin(state, 'sleep', { hours: intent.hours }));
+        pushChat('pet', 'Logged: ' + intent.hours + ' hours of sleep. Rest is care too.');
+      } else {
+        pushChat('pet', 'How many hours did you sleep? Tell me like: I slept 7 hours.');
+      }
+      return;
+    }
+    if (intent.kind === 'breathe') {
+      var stab = document.querySelector('[data-nav-view="support"]');
+      if (stab) stab.click();
+      var gbtn = document.querySelector('[data-help-target="grounding-card"]');
+      if (gbtn) gbtn.click();
+      pushChat('pet', brain.localReply(intent, {}));
+      return;
+    }
+    if (intent.kind === 'nav') {
+      var viewMap = { support: 'support', settings: 'support', focus: 'focus', home: 'home', today: 'home', companion: 'companion', activities: 'activities' };
+      var tab = document.querySelector('[data-nav-view="' + (viewMap[intent.view] || 'home') + '"]');
+      if (tab) tab.click();
+      pushChat('pet', brain.localReply(intent, {}));
+      return;
+    }
+    if (intent.kind === 'cant-start') {
+      openCantStart();
+      pushChat('pet', brain.localReply(intent, {}));
+      return;
+    }
+    if (intent.kind === 'check-email') {
+      runEmailCheck().then(function (summary) { pushChat('pet', summary); });
+      return;
+    }
+    var facts = chatFacts();
+    if (intent.kind === 'explain') facts.explainText = explainFor(intent.query);
+    if (intent.kind === 'memory-search') facts.memoryHits = searchMemory(intent.query);
+    var local = brain.localReply(intent, facts);
+    if (local) { pushChat('pet', local); return; }
+    /* kind 'chat': the AI engine when allowed, else a warm local answer. */
+    askAi(text).then(function (reply) {
+      pushChat('pet', reply || 'I want to answer that well. My smartest answers use the connected layer — it is off right now, so here is what I can always do: check your day, shrink big tasks, log water and feelings, explain my ideas, and search my memory.');
+    });
+  }
+
+  /* ---------- Connected accounts client ----------
+   * The PWA never holds a mailbox token. It holds only a Supabase
+   * sign-in (identity) and calls Edge Functions; the backend holds
+   * tokens encrypted and does the mail work. Off by default. */
+  var sbClient = null, sbUser = null, sbReady = false, sbRecovery = false;
+  function connFlag() { try { return localStorage.getItem('rootling-connected-v1') === '1'; } catch (e) { return false; } }
+  function setConnFlag(on) { try { if (on) localStorage.setItem('rootling-connected-v1', '1'); else localStorage.removeItem('rootling-connected-v1'); } catch (e) { /* ignore */ } }
+  function connectedConfigured() { return !!SUPABASE_URL && !!SUPABASE_ANON_KEY; }
+
+  function initConnected() {
+    var status = gel('connected-status');
+    if (!connectedConfigured()) {
+      if (status) status.textContent = 'Email connection is not set up yet. Rootling works fully without it.';
+      var si = gel('connected-signin-btn'); if (si) si.hidden = true;
+      var eb = gel('connected-email-block'); if (eb) eb.hidden = true;
+      return;
+    }
+    import('https://esm.sh/@supabase/supabase-js@2').then(function (mod) {
+      sbClient = mod.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      sbReady = true;
+      return sbClient.auth.getSession();
+    }).then(function (res) {
+      if (res && res.data) sbUser = res.data.session ? res.data.session.user : null;
+      if (sbClient) sbClient.auth.onAuthStateChange(function (ev, session) {
+        sbUser = session ? session.user : null;
+        if (ev === 'PASSWORD_RECOVERY') sbRecovery = true;
+        renderConnected();
+      });
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('pwreset') === '1') {
+          /* Back from the password-reset email link: show the
+           * pick-a-new-password form (the recovery session arrives
+           * with the link; PASSWORD_RECOVERY above also flags it). */
+          sbRecovery = true;
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+        if (params.get('connected') === '1') {
+          setConnFlag(true);
+          window.history.replaceState({}, '', window.location.pathname);
+          var msg = gel('connected-msg');
+          if (msg) msg.textContent = 'Email connected. Your pet can check it now.';
+        }
+      } catch (e) { /* plain load is fine */ }
+      renderConnected();
+      if (sbUser && connFlag()) renderConnectedLists();
+    }).catch(function () {
+      var st = gel('connected-status');
+      if (st) st.textContent = 'Connected features could not load (offline?). Rootling works fully without them.';
+    });
+  }
+
+  function renderConnected() {
+    var status = gel('connected-status');
+    var si = gel('connected-signin-btn'), cn = gel('connected-connect-btn'),
+        sc = gel('connected-scan-btn'), dc = gel('connected-disconnect-btn');
+    var eb = gel('connected-email-block'), np = gel('connected-newpass-form');
+    if (np) np.hidden = !sbRecovery;
+    if (eb) eb.hidden = !!sbUser && !sbRecovery;
+    if (!status) return;
+    if (!sbReady) return;
+    if (!sbUser) {
+      status.textContent = 'Email is not connected. Sign in first — that is only your name badge, it does not read any email.';
+      if (si) si.hidden = false;
+      if (cn) cn.hidden = true; if (sc) sc.hidden = true; if (dc) dc.hidden = true;
+      return;
+    }
+    if (si) si.hidden = true;
+    if (!connFlag()) {
+      status.textContent = 'Signed in. Now connect Gmail & Calendar — your pet will ask Google for read-only access, and show you everything it finds.';
+      if (cn) cn.hidden = false; if (sc) sc.hidden = true; if (dc) dc.hidden = true;
+      return;
+    }
+    status.textContent = 'Gmail & Calendar are connected (read-only). Your pet shows everything it finds below.';
+    if (cn) cn.hidden = true; if (sc) sc.hidden = false; if (dc) dc.hidden = false;
+  }
+
+  function sbJwt() {
+    if (!sbClient) return Promise.resolve(null);
+    return sbClient.auth.getSession().then(function (res) {
+      return res && res.data && res.data.session ? res.data.session.access_token : null;
+    });
+  }
+  function callFunction(name, body) {
+    return sbJwt().then(function (jwt) {
+      if (!jwt) throw new Error('no session');
+      return fetch(SUPABASE_URL + '/functions/v1/' + name, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + jwt, 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+      });
+    });
+  }
+
+  function runEmailCheck() {
+    if (!connectedConfigured()) return Promise.resolve('Email is not set up yet. Your pet works fully without it — this trick needs the connected layer, in Settings & Support.');
+    if (!sbUser) return Promise.resolve('First, sign in — the Connected accounts card is in Settings & Support. Signing in is only your name badge; it does not read email.');
+    if (!connFlag()) return Promise.resolve('Email is not connected yet. The Connect button is in Settings & Support, in the Connected accounts card.');
+    return callFunction('scan', {}).then(function (res) {
+      if (res.status === 409) { setConnFlag(false); renderConnected(); return 'The connection needs a refresh. Please connect again in Settings & Support.'; }
+      if (!res.ok) return 'I could not check just now. Nothing is wrong with your email — try again in a bit.';
+      return res.json();
+    }).then(function (out) {
+      if (typeof out === 'string') return out;
+      renderConnectedLists();
+      var msg = gel('connected-msg');
+      if (msg) msg.textContent = 'Checked just now: ' + out.found + ' email(s), ' + out.added + ' new thing(s) noticed.';
+      return 'I checked your email: ' + out.found + ' email(s) from the last 30 days, ' + out.added + ' new thing(s) noticed. Anything that looks like it needs doing is in "Suggested from your email", in Settings & Support.';
+    }).catch(function () {
+      return 'I could not check just now. Nothing is wrong with your email — try again in a bit.';
+    });
+  }
+
+  function renderConnectedLists() {
+    if (!sbClient || !sbUser) return;
+    sbClient.from('noticed').select('title, detail, created_at').order('created_at', { ascending: false }).limit(15)
+      .then(function (res) {
+        var list = gel('noticed-list');
+        if (!list) return;
+        var rows = (res && res.data) || [];
+        list.innerHTML = rows.length
+          ? rows.map(function (r) { return '<li>' + escapeHtml(r.title) + (r.detail ? ' — ' + escapeHtml(r.detail) : '') + '</li>'; }).join('')
+          : '<li>Nothing yet. Tap "Check my email now" and what your pet finds shows up here.</li>';
+      });
+    sbClient.from('extracted_tasks').select('id, title, due_hint').eq('status', 'suggested').order('created_at', { ascending: false }).limit(10)
+      .then(function (res) {
+        var list = gel('suggested-list');
+        if (!list) return;
+        var rows = (res && res.data) || [];
+        if (!rows.length) { list.innerHTML = '<li>No suggestions right now.</li>'; return; }
+        list.innerHTML = '';
+        rows.forEach(function (r) {
+          var li = document.createElement('li');
+          li.appendChild(document.createTextNode(r.title + (r.due_hint ? ' (' + r.due_hint + ')' : '')));
+          var add = document.createElement('button');
+          add.type = 'button'; add.className = 'btn btn-soft'; add.textContent = 'Make it my one thing';
+          add.addEventListener('click', function () { acceptSuggestion(r, li); });
+          var dis = document.createElement('button');
+          dis.type = 'button'; dis.className = 'btn btn-ghost'; dis.textContent = 'Not needed';
+          dis.addEventListener('click', function () { dismissSuggestion(r, li); });
+          li.appendChild(document.createTextNode(' '));
+          li.appendChild(add); li.appendChild(dis);
+          list.appendChild(li);
+        });
+      });
+  }
+  function escapeHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function acceptSuggestion(row, li) {
+    if (sbClient) sbClient.from('extracted_tasks').update({ status: 'added' }).eq('id', row.id).then(function () {});
+    var input = gel('today-priority-input');
+    if (input) { input.value = row.title; input.scrollIntoView({ block: 'center' }); }
+    if (li) li.innerHTML = 'Added — it is in the one-thing box above. Tap its Add button to keep it.';
+  }
+  function dismissSuggestion(row, li) {
+    if (sbClient) sbClient.from('extracted_tasks').update({ status: 'dismissed' }).eq('id', row.id).then(function () {});
+    if (li) li.remove();
+  }
+  function syncAiPermission(resource, provider, value) {
+    if (!sbClient || !sbUser) return;
+    sbClient.from('ai_permissions').upsert({
+      user_id: sbUser.id, resource: resource, ai_provider: provider, allowed: value,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,resource,ai_provider' }).then(function () {}, function () {});
+  }
+
+  function buildContextPack() {
+    var pack = { resources: [], petName: state.petName || 'Rootling' };
+    var facts = chatFacts();
+    pack.today = { next: facts.nextText || null, checkinsDone: facts.doneTypes, momentum: facts.momentumWord };
+    var sn = state.learning && state.learning.supportNeeds;
+    if (sn && sn.top && typeof window !== 'undefined' && window.ROOTLING_SUPPORT) {
+      pack.topHelp = sn.top.map(function (id) { var s = window.ROOTLING_SUPPORT.supportById(id); return s ? s.name : id; });
+    }
+    ['gmail', 'calendar', 'tasks'].forEach(function (r) { if (canAi(r, 'gemini')) pack.resources.push(r); });
+    if (pack.resources.indexOf('gmail') !== -1 && connFlag()) {
+      pack.email = 'Email is connected. Suggested tasks and noticed items appear in the app; answer questions about email from the user\'s words and these facts only.';
+    }
+    return pack;
+  }
+  function askAi(text) {
+    var a = loadAiAccess();
+    if (a.privacyMode || !connectedConfigured() || !sbUser) return Promise.resolve(null);
+    var history = loadChat().messages.slice(-7, -1).map(function (m) { return { role: m.role, text: m.text }; });
+    return callFunction('chat', { message: text, context: buildContextPack(), history: history })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (out) { return out && out.reply ? out.reply : null; })
+      .catch(function () { return null; });
+  }
+
+  var v11Wired = false;
+  function initV11() {
+    if (v11Wired) return;
+    v11Wired = true;
+    renderAiAccess();
+    renderChat();
+    initConnected();
+    initV12();
+    var modeLine = gel('chat-mode-line');
+    var a = loadAiAccess();
+    if (modeLine) modeLine.textContent = a.privacyMode
+      ? 'Privacy Mode is on: your pet answers only on this device.'
+      : 'Your pet answers on this device. With email connected and Privacy Mode off, it can also think with its AI engine.';
+    var form = gel('chat-form');
+    if (form) form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var input = gel('chat-input');
+      var text = input ? input.value.trim() : '';
+      if (!text) return;
+      input.value = '';
+      sendChat(text);
+    });
+    var chips = document.querySelectorAll('[data-chat-send]');
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].addEventListener('click', function () { sendChat(this.getAttribute('data-chat-send')); });
+    }
+    var askForm = gel('ask-memory-form');
+    if (askForm) askForm.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var input = gel('ask-memory-input');
+      var list = gel('ask-memory-results');
+      if (!list) return;
+      var hits = searchMemory(input ? input.value : '');
+      list.innerHTML = hits.length
+        ? hits.map(function (h) { return '<li>' + escapeHtml(h) + '</li>'; }).join('')
+        : '<li>Nothing found for that. Your pet\'s memory grows as you spend days together.</li>';
+    });
+    var pt = gel('privacy-mode-toggle');
+    if (pt) pt.addEventListener('change', function () {
+      var acc = loadAiAccess();
+      acc.privacyMode = pt.checked;
+      acc.audit.push({ at: Date.now(), resource: 'privacy', provider: 'mode', value: pt.checked });
+      saveAiAccess();
+      renderAiAccess();
+      initV11ModeLine();
+    });
+    var si = gel('connected-signin-btn');
+    if (si) si.addEventListener('click', function () {
+      if (!sbClient) return;
+      sbClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + window.location.pathname } });
+    });
+    var cn = gel('connected-connect-btn');
+    if (cn) cn.addEventListener('click', function () {
+      callFunction('oauth-start', {}).then(function (res) { return res.json(); }).then(function (out) {
+        if (out && out.url) window.location.href = out.url;
+      }).catch(function () {
+        var msg = gel('connected-msg');
+        if (msg) msg.textContent = 'Could not start the connection. Try again in a bit.';
+      });
+    });
+    /* Email + password sign-in, sign-up, and reset (v12). */
+    function connMsg(text) { var m = gel('connected-msg'); if (m) m.textContent = text; }
+    function connEmail() { var i = gel('connected-email-input'); return i ? i.value.trim() : ''; }
+    function connPassword() { var i = gel('connected-password-input'); return i ? i.value : ''; }
+    var eform = gel('connected-email-form');
+    if (eform) eform.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      if (!sbClient) return;
+      sbClient.auth.signInWithPassword({ email: connEmail(), password: connPassword() }).then(function (res) {
+        if (res && res.error) { connMsg('That email and password did not match. Try again, or tap Forgot your password?'); return; }
+        connMsg('Signed in. Welcome back.');
+      }).catch(function () { connMsg('Sign-in did not work. Try again in a bit.'); });
+    });
+    var sub = gel('connected-email-signup-btn');
+    if (sub) sub.addEventListener('click', function () {
+      if (!sbClient) return;
+      sbClient.auth.signUp({ email: connEmail(), password: connPassword(), options: { emailRedirectTo: window.location.origin + window.location.pathname } }).then(function (res) {
+        if (res && res.error) { connMsg('That account could not be made: ' + res.error.message); return; }
+        if (res && res.data && res.data.session) connMsg('Account made and you are signed in.');
+        else connMsg('Account made. Check your email and tap the link to finish — then sign in here.');
+      }).catch(function () { connMsg('Sign-up did not work. Try again in a bit.'); });
+    });
+    var fgb = gel('connected-forgot-btn');
+    if (fgb) fgb.addEventListener('click', function () {
+      if (!sbClient) return;
+      var email = connEmail();
+      if (!email) { connMsg('Write your email in the box above first, then tap Forgot your password?'); return; }
+      sbClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname + '?pwreset=1' }).then(function () {
+        connMsg('Reset link sent. Check your email and tap the link — it brings you back here to pick a new password.');
+      }).catch(function () { connMsg('The reset link could not be sent. Try again in a bit.'); });
+    });
+    var npf = gel('connected-newpass-form');
+    if (npf) npf.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      if (!sbClient) return;
+      var input = gel('connected-newpass-input');
+      var pw = input ? input.value : '';
+      if (!pw || pw.length < 6) { connMsg('Please pick a password with 6 or more letters.'); return; }
+      sbClient.auth.updateUser({ password: pw }).then(function (res) {
+        if (res && res.error) { connMsg('That new password could not be saved. Tap the newest reset link in your email and try again.'); return; }
+        sbRecovery = false;
+        if (input) input.value = '';
+        renderConnected();
+        connMsg('New password saved. You are signed in.');
+      }).catch(function () { connMsg('That new password could not be saved. Try again in a bit.'); });
+    });
+    var sc = gel('connected-scan-btn');
+    if (sc) sc.addEventListener('click', function () { runEmailCheck(); });
+    var dc = gel('connected-disconnect-btn');
+    if (dc) dc.addEventListener('click', function () {
+      callFunction('disconnect', {}).then(function () {
+        setConnFlag(false);
+        renderConnected();
+        var list = gel('noticed-list'); if (list) list.innerHTML = '<li>Disconnected. Connected data was deleted.</li>';
+        var sl = gel('suggested-list'); if (sl) sl.innerHTML = '<li>No suggestions.</li>';
+        var msg = gel('connected-msg');
+        if (msg) msg.textContent = 'Disconnected. The token was revoked and connected data deleted.';
+      });
+    });
+  }
+  function initV11ModeLine() {
+    var modeLine = gel('chat-mode-line');
+    if (!modeLine) return;
+    modeLine.textContent = loadAiAccess().privacyMode
+      ? 'Privacy Mode is on: your pet answers only on this device.'
+      : 'Your pet answers on this device. With email connected and Privacy Mode off, it can also think with its AI engine.';
+  }
+
+  /* ================= v12: topics, fitness, pet experience ================= */
+  function fitnessStore() {
+    if (!state.fitness) state.fitness = { goal: 4000, steps: {} };
+    if (!state.fitness.steps) state.fitness.steps = {};
+    return state.fitness;
+  }
+  function stepsToday() { return fitnessStore().steps[todayKey()] || 0; }
+  function stepsInLastDays(st, days) {
+    var fit = (st && st.fitness) || {};
+    var byDay = fit.steps || {};
+    var total = 0, key = todayKey();
+    for (var i = 0; i < days; i++) { total += byDay[key] || 0; key = shiftKey(key, -1); }
+    return total;
+  }
+  function addSteps(n) {
+    var fit = fitnessStore();
+    var key = todayKey();
+    fit.steps[key] = (fit.steps[key] || 0) + Math.max(0, Math.round(n) || 0);
+    saveState(state);
+    renderFitness();
+  }
+  function renderFitness() {
+    var fit = fitnessStore();
+    var today = gel('fitness-today');
+    if (today) {
+      var goal = fit.goal || 4000;
+      var soFar = stepsToday();
+      today.textContent = 'Steps today: ' + soFar + ' of your ' + goal + ' goal.' +
+        (soFar >= goal ? ' Goal met — lovely moving!' : ' Every step counts.');
+    }
+    var week = gel('fitness-week');
+    if (week) week.textContent = 'Steps in the last 7 days: ' + stepsInLastDays(state, 7) + '.';
+    var goalInput = gel('fitness-goal-input');
+    if (goalInput && document.activeElement !== goalInput) goalInput.value = fit.goal || 4000;
+  }
+  function renderTopics() {
+    var wrap = gel('topics-list');
+    if (!wrap) return;
+    var lib = (typeof window !== 'undefined' && window.ROOTLING_SUPPORT) || null;
+    if (!lib || !lib.TOPICS) { wrap.innerHTML = ''; return; }
+    if (!Array.isArray(state.topics)) state.topics = [];
+    wrap.innerHTML = '';
+    lib.TOPICS.forEach(function (topic) {
+      var label = document.createElement('label');
+      label.className = 'toggle-row';
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = state.topics.indexOf(topic.id) !== -1;
+      box.addEventListener('change', function () {
+        var idx = state.topics.indexOf(topic.id);
+        if (box.checked && idx === -1) state.topics.push(topic.id);
+        if (!box.checked && idx !== -1) state.topics.splice(idx, 1);
+        saveState(state);
+        if (state.learningEnabled) { computeAdaptations(state, new Date()); saveState(state); }
+        renderLearned();
+      });
+      label.appendChild(box);
+      label.appendChild(document.createTextNode(' ' + topic.name + ' — ' + topic.about));
+      wrap.appendChild(label);
+    });
+  }
+  var v12Wired = false;
+  function initV12() {
+    if (v12Wired) return;
+    v12Wired = true;
+    renderTopics();
+    renderFitness();
+    var b100 = gel('fitness-add-100'); if (b100) b100.addEventListener('click', function () { addSteps(100); });
+    var b500 = gel('fitness-add-500'); if (b500) b500.addEventListener('click', function () { addSteps(500); });
+    var walk = gel('fitness-walk-btn');
+    if (walk) walk.addEventListener('click', function () {
+      afterCheckin(applyCheckin(state, 'movement', { level: 'little' }));
+      addSteps(800);
+    });
+    var form = gel('fitness-form');
+    if (form) form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var input = gel('fitness-input');
+      var n = input ? Number(input.value) : 0;
+      if (n > 0) { addSteps(n); input.value = ''; }
+    });
+    var goalForm = gel('fitness-goal-form');
+    if (goalForm) goalForm.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var input = gel('fitness-goal-input');
+      var n = input ? Number(input.value) : 0;
+      if (n >= 100) { fitnessStore().goal = Math.round(n); saveState(state); renderFitness(); }
+    });
+  }
+
   function hourLabel(h) {
     if (h === 0) return '12am';
     if (h < 12) return h + 'am';
@@ -819,6 +1587,40 @@
     var bn = state.learning.burnout;
     if (bn && bn.band && bn.band !== 'green' && bn.triggers && bn.triggers.length) {
       facts.push('Your pet noticed a tired pattern: ' + bn.triggers.join(' ') + ' While it lasts, asks are smaller and rest comes first.');
+    }
+    /* Explainability (v11): why the top support was suggested, and how
+     * sure the pet is — in words, never a number. */
+    var sn2 = state.learning.supportNeeds;
+    var trustF = (typeof window !== 'undefined' && window.ROOTLING_TRUST) || null;
+    if (sn2 && window.ROOTLING_SUPPORT && sn2.top && sn2.top.length) {
+      var topSup = window.ROOTLING_SUPPORT.supportById(sn2.top[0]);
+      if (topSup) {
+        var dimReasons = (sn2.reasons && sn2.reasons[topSup.dim]) || [];
+        if (dimReasons.length) facts.push('Why your pet suggested "' + topSup.name + '": ' + dimReasons.join(' '));
+        var conf = sn2.confidence ? sn2.confidence[topSup.dim] : null;
+        if (trustF && typeof conf === 'number') facts.push('How sure your pet is: ' + trustF.confidenceWords(conf));
+      }
+    }
+    /* Pet growth (v11): what the pet has learned to do, and what it is
+     * still learning — framed as the pet's growth, never a user score. */
+    if (state.careDays.length) facts.push('You and your pet have shared ' + state.careDays.length + ' check-in day(s) together.');
+    if (sn2 && sn2.scores && window.ROOTLING_SUPPORT) {
+      var stillLearning = [];
+      var allDims = window.ROOTLING_SUPPORT.DIMENSIONS || [];
+      for (var dxi = 0; dxi < allDims.length; dxi++) {
+        if (typeof sn2.scores[allDims[dxi].id] !== 'number') stillLearning.push(allDims[dxi].name.toLowerCase());
+      }
+      if (stillLearning.length) facts.push('Your pet is still learning about: ' + stillLearning.join(', ') + '.');
+    }
+    /* Reflections (v11): the latest monthly snapshot, else weekly. */
+    var R2 = state.learning.reflections;
+    if (R2 && (R2.monthly || R2.weekly)) {
+      var snap = R2.monthly && R2.monthly.lines.length ? R2.monthly : R2.weekly;
+      if (snap && snap.lines.length) facts.push(snap.period + ' your pet noticed: ' + snap.lines.join(' '));
+    }
+    if (Array.isArray(state.topics) && state.topics.length && typeof window !== 'undefined' && window.ROOTLING_SUPPORT) {
+      var topicNames = (window.ROOTLING_SUPPORT.TOPICS || []).filter(function (tp) { return state.topics.indexOf(tp.id) !== -1; }).map(function (tp) { return tp.name; });
+      if (topicNames.length) facts.push('You told your pet you live with: ' + topicNames.join(', ') + '. It offers matching help more often. You can change this any time in Settings.');
     }
     var anyAdaptation = !!ad.demandLevel || !!ad.promptStyle || Object.keys(ad.microTypes).length > 0 || !!ad.celebrateBoost || !!ad.suggestGrounding || (ad.bestHour !== null && ad.bestHour !== undefined);
     if (anyAdaptation) facts.push('Your chosen support style always comes first: learning only fills in wording or ask size where your style did not already set them, and it never changes previews or calm mode you chose.');
@@ -1235,6 +2037,10 @@
     var day = dayRecord(state, key);
     var stageBefore = stageFor(state.sunshine, state.form).id;
     var wasDone = type === 'water' ? !!(day.water && day.water.glasses > 0) : !!day[type];
+    /* Pet experience (v12): the pet earns experience when it helps —
+     * first completion of a check-in kind today. The pet's points are
+     * the pet's growth, never a score on the person. */
+    if (!wasDone) state.petXp = (state.petXp || 0) + 10;
     var sunshineBefore = state.sunshine;
     var careFactor = CARE_STYLE_FACTORS[state.careStyle] || 1;
 
@@ -1522,6 +2328,11 @@
     var mood = petMood(state, now, celebrating);
 
     els.petNameDisplay.textContent = state.petName;
+    var xpLine = document.getElementById('pet-xp-line');
+    if (xpLine && uxLib()) {
+      var xpNow = state.petXp || 0;
+      xpLine.textContent = 'Pet level ' + uxLib().xpLevel(xpNow) + ' · ' + xpNow + ' experience points — your pet grows as it helps you.';
+    }
     var stageIdx = stagesFor(state.form).indexOf(stage);
     els.stageLabel.textContent = stage.name + ' stage · ' + (FORMS[state.form] || FORMS.plant).label + ' companion · Level ' + (stageIdx + 1);
     if (els.petIdentityLine) {
@@ -2209,30 +3020,7 @@
     setLearningEnabled: setLearningEnabled,
     setToggle: setToggle,
     promptFor: promptFor,
-    getState: function () { return state; },
-    /* v12 (Daniel 2026-10-15: "the pet grows and gets experience points"
-     * from helping and from fitness). Bonus experience feeds the SAME
-     * growth points as check-ins (state.sunshine), so the pet grows
-     * through its normal stages. Capped per day so check-ins stay the
-     * main way to grow, and it never goes down. */
-    addExperience: function (points, reason) {
-      points = Math.max(0, Math.round(Number(points) || 0));
-      if (!points || !state.petName) return { added: 0 };
-      var key = todayKey();
-      if (!state.bonusXp || state.bonusXp.date !== key) state.bonusXp = { date: key, pts: 0 };
-      var cap = 30;
-      var add = Math.min(points, cap - state.bonusXp.pts);
-      if (add <= 0) return { added: 0, capped: true, cap: cap };
-      var before = stageFor(state.sunshine, state.form).id;
-      state.sunshine += add;
-      state.bonusXp.pts += add;
-      state.xpLog = (state.xpLog || []).concat([{ at: Date.now(), pts: add, why: String(reason || '').slice(0, 40) }]).slice(-50);
-      saveState(state);
-      var after = stageFor(state.sunshine, state.form);
-      var up = after.id !== before;
-      try { if (typeof afterCheckin === 'function') afterCheckin({ stageUp: up }); } catch (e) { /* growth is saved even if the picture waits */ }
-      return { added: add, stageUp: up, stageName: after.name, total: state.sunshine, today: state.bonusXp.pts, cap: cap };
-    }
+    getState: function () { return state; }
   };
   if (typeof window !== 'undefined') window.SproutApp = api;
   if (typeof window !== 'undefined') window.RootlingApp = api;
@@ -2553,18 +3341,14 @@
     var ALL_KEYS = ['sprout-state-v1', 'rootling-notifications-v1',
       'rootling-persist-requested-v1', 'rootling-appearance-v1',
       'rootling-exec-v1', 'rootling-well-v1', 'rootling-social-v1',
-      'rootling-time-v1', 'rootling-memorybook-v1', 'rootling-assistant-v1',
-      'rootling-assistant-secrets-v1', 'rootling-fitness-v1', CONSENT_KEY];
+      'rootling-time-v1', 'rootling-memorybook-v1', CONSENT_KEY];
     var AREA_KEYS = [
       { key: 'rootling-exec-v1', label: 'Delete tasks and focus data' },
       { key: 'rootling-well-v1', label: 'Delete routines and wellbeing data' },
       { key: 'rootling-appearance-v1', label: 'Delete look and voice settings' },
       { key: 'rootling-social-v1', label: 'Delete social practice data' },
       { key: 'rootling-time-v1', label: 'Delete time and activity data' },
-      { key: 'rootling-memorybook-v1', label: 'Delete memory book data' },
-      { key: 'rootling-assistant-v1', label: 'Delete what Ask your pet learned, reminders, and people' },
-      { key: 'rootling-assistant-secrets-v1', label: 'Delete Ask your pet keys' },
-      { key: 'rootling-fitness-v1', label: 'Delete steps, workouts, and fitness goals' }
+      { key: 'rootling-memorybook-v1', label: 'Delete memory book data' }
     ];
     var wizardStep = 1;
     var privacyReturn = null; /* 'adopt' | 'main' | 'wizard' */
@@ -8505,8 +9289,7 @@
       'companion-manage-card': 'support', 'account-card': 'support',
       'notifications-card': 'support', 'learned-view': 'support',
       'memory-book': 'support', 'privacy-view': 'support', 'memory-gate': 'support',
-      'changes-view': 'support', 'welcome-card': 'home',
-      'ask-card': 'home', 'fit-card': 'home', 'ask-settings-card': 'support'
+      'changes-view': 'support', 'welcome-card': 'home'
     };
     var VIEW_OF_HEADING = {
       'pet-heading': 'home', 'checkins-heading': 'home',

@@ -97,7 +97,25 @@
       evidence: { strength: 'Moderate', basis: 'Social communication supports — research brief, autism section' } },
     { id: 'same-clear-words', name: 'Same clear words', line: 'Your pet uses the same clear words each day, so you know what to expect.',
       dims: { routine: 2, social: 1 }, feature: 'support',
-      evidence: { strength: 'High', basis: 'Predictable, structured communication — research brief, autism section' } }
+      evidence: { strength: 'High', basis: 'Predictable, structured communication — research brief, autism section' } },
+    /* Topic supports (v12): offered more often when the user says they
+     * live with the topic — user-declared, never inferred. */
+    { id: 'easy-breathing', name: 'Easy breathing pace', line: 'Slow breaths, with a longer breath out. Your pet breathes with you.',
+      dims: { feelings: 2, sensory: 2 }, feature: 'support', topics: ['copd'],
+      evidence: { strength: 'High', basis: 'Paced breathing with a longer exhale eases breathlessness — pulmonary rehab teaching (NICE NG115; GOLD report)' } },
+    { id: 'sit-and-do', name: 'Sit-and-do steps', line: 'Big things can be done sitting down. Your pet plans seated first steps.',
+      dims: { executive: 2 }, feature: 'focus', topics: ['copd'],
+      evidence: { strength: 'Moderate', basis: 'Energy conservation and seated task planning — standard pacing practice for chronic lung disease' } },
+    { id: 'energy-budget', name: 'Plan by energy', line: 'Spend energy like money: the important thing first, and rest is in the budget.',
+      dims: { routine: 2, executive: 1 }, feature: 'today', topics: ['copd'],
+      evidence: { strength: 'High', basis: 'Pacing and energy management are core self-management teaching in pulmonary rehab programs' } }
+  ];
+
+  /* Things a user may say they live with. The pet NEVER guesses these —
+   * the user picks them (Settings: "Things you live with"), and picking
+   * one only changes which supports are offered more often. */
+  var TOPICS = [
+    { id: 'copd', name: 'Breathing / COPD', about: 'Help that respects breath and energy: paced breathing, seated steps, energy budgeting.' }
   ];
 
   /* Gentle signposting only — the app points to people, never to a
@@ -161,6 +179,7 @@
   var api = {
     DIMENSIONS: DIMENSIONS,
     SUPPORTS: SUPPORTS,
+    TOPICS: TOPICS,
     ESCALATION: ESCALATION,
     scoreSupportNeeds: scoreSupportNeeds,
     topSupports: topSupports,

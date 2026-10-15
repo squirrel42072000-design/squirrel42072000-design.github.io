@@ -42,9 +42,12 @@
     'rootling-vault-v1',
     'rootling-live-companion-v1',
     'rootling-pending-adopt-v1',
-    'rootling-assistant-v1',
-    'rootling-assistant-secrets-v1',
-    'rootling-fitness-v1'
+    /* v11/v12 stores join the account space: AI permissions, pet chat
+     * and the connected flag are one person's, never shared across
+     * accounts on a shared device. */
+    'rootling-ai-access-v1',
+    'rootling-chat-v1',
+    'rootling-connected-v1'
   ];
 
   var store = null;

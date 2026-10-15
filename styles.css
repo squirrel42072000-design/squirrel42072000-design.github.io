@@ -462,76 +462,9 @@ body:has(#quiet-view:not([hidden])) main{display:none}
 #support-open-row{margin-top:16px}
 #support-open-row .btn{width:100%}
 
-/* ---------- Ask your pet (v11) ---------- */
-.ask-card{border:2px solid var(--leaf-soft)}
-.ask-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.ask-head h3{margin:0}
-.ask-level{font-size:0.8125rem;color:var(--leaf-dark);background:var(--leaf-soft);border:1px solid var(--sage);border-radius:999px;padding:4px 10px}
-.ask-log{max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin:12px 0;padding:4px 2px;overscroll-behavior:contain}
-.ask-msg{max-width:92%;border-radius:16px;padding:10px 14px;line-height:1.5}
-.ask-msg p{margin:0 0 6px}
-.ask-msg p:last-child{margin-bottom:0}
-.ask-user{align-self:flex-end;background:var(--leaf);color:#fff;border-bottom-right-radius:6px}
-.ask-pet{align-self:flex-start;background:var(--cream);border:1px solid var(--line);border-bottom-left-radius:6px}
-.ask-who{font-size:0.75rem;font-weight:700;color:var(--leaf-dark);text-transform:uppercase;letter-spacing:.04em}
-.ask-list{margin:6px 0 8px 1.2em;padding:0}
-.ask-list li{margin:4px 0}
-.ask-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.ask-actions .btn{min-height:44px;padding:8px 14px;font-size:0.9rem}
-.ask-feedback{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:0.875rem;color:var(--ink-soft)}
-.ask-feedback .btn-chip{min-height:36px;padding:4px 12px}
-.ask-form{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
-.ask-form input{flex:1 1 180px;min-height:48px;margin:0}
-.ask-form .btn{min-height:48px}
-.ask-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.ask-link{color:var(--leaf-dark);text-decoration:underline;text-underline-offset:2px;word-break:break-word}
-.ask-badge{display:inline-block;font-size:0.72rem;font-weight:700;border-radius:999px;padding:1px 8px;margin-left:2px;border:1px solid var(--line);background:var(--paper);color:var(--ink-soft);vertical-align:1px}
-.ask-badge.ask-strong{background:var(--leaf-soft);border-color:var(--sage);color:var(--leaf-dark)}
-.ask-badge.ask-good{background:var(--sun-soft);border-color:var(--sun);color:#7a5200}
-.ask-topic h4,.ask-more h4{font-size:0.9rem;margin:10px 0 4px}
-.ask-research-mini{border-left:3px solid var(--sage);padding-left:10px;margin-top:8px}
-.ask-timer{text-align:center;background:var(--leaf-soft);border-radius:16px;padding:12px;margin-bottom:10px}
-.ask-timer-clock{font-size:2.4rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--leaf-dark);margin:0}
-.ask-breathe{display:flex;flex-direction:column;align-items:center;gap:6px;margin:10px 0}
-.ask-breathe-ring{width:120px;height:120px;border-radius:50%;background:var(--leaf-soft);border:3px solid var(--sage);display:flex;align-items:center;justify-content:center;transform:scale(.75);transition:transform 4s ease-in-out}
-.ask-breathe-ring.grow{transform:scale(1);transition-duration:4s}
-.ask-breathe-ring.shrink{transform:scale(.75);transition-duration:6s}
-.ask-breathe-word{font-weight:700;color:var(--leaf-dark);margin:0}
-.calm-motion .ask-breathe-ring,body.calm .ask-breathe-ring{transition:none}
-@media (prefers-reduced-motion: reduce){.ask-breathe-ring{transition:none}}
-.ask-form.ask-inline,.ask-inline{display:flex;gap:8px;margin-top:8px}
-.ask-inline input{flex:1;min-height:44px;margin:0}
-.ask-form label,.ask-details label{display:block}
-form.ask-form:not(#ask-form){flex-direction:column}
-.ask-details{margin:12px 0;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--cream)}
-.ask-details summary{cursor:pointer;font-weight:700;color:var(--ink);min-height:32px}
-.ask-details input,.ask-details select{width:100%}
-@media (max-width:560px){.ask-form input{flex-basis:100%}.ask-form .btn{flex:1 1 0}}
-
-/* ---------- v12: fitness, studies, mail, urgent ---------- */
-.ask-sub{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:6px}
-.ask-sub .btn-chip{min-height:36px}
-#ask-google-btn[aria-pressed="true"]{background:var(--leaf-soft);border-color:var(--sage);color:var(--leaf-dark)}
-.ask-urgent{background:#fff1ee;border:1px solid #e8b4a8;color:#8a2c17;border-radius:12px;padding:8px 10px;font-weight:600}
-.ask-study,.ask-mail{padding:6px 0;border-bottom:1px dashed var(--line)}
-.ask-study:last-child,.ask-mail:last-child{border-bottom:0}
-.ask-mail-from{font-weight:600;margin:0 0 2px}
-.fit-card h3{margin-top:0}
-.fit-meter{margin:10px 0}
-.fit-meter p{margin:0 0 4px;font-weight:600;font-variant-numeric:tabular-nums}
-.fit-track{height:12px;border-radius:999px;background:var(--cream);border:1px solid var(--line);overflow:hidden}
-.fit-track span{display:block;height:100%;width:0;background:var(--leaf);border-radius:999px;transition:width .4s ease}
-.fit-week{display:flex;gap:6px;align-items:flex-end;height:80px;margin:12px 0 4px;padding:0 2px}
-.fit-day{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
-.fit-day-bar{width:100%;max-width:28px;border-radius:6px 6px 2px 2px;background:var(--sage)}
-.fit-day-bar.hit{background:var(--leaf)}
-.fit-day-label{font-size:0.75rem;color:var(--ink-soft)}
-.fit-walk{text-align:center;background:var(--leaf-soft);border-radius:16px;padding:12px;margin:10px 0}
-.fit-walk-live{font-size:1.5rem;font-weight:700;color:var(--leaf-dark);margin:0 0 8px;font-variant-numeric:tabular-nums}
-.fit-player{border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--paper);margin-top:8px}
-.fit-player-title{font-weight:700;margin:0 0 4px}
-.fit-now{text-align:center;background:var(--leaf-soft);border-radius:12px;padding:10px;margin:8px 0}
-.fit-now-name{font-weight:700;margin:0}
-.fit-current{font-weight:700;color:var(--leaf-dark)}
-.fit-done{opacity:.55;text-decoration:line-through}
-@media (prefers-reduced-motion: reduce){.fit-track span{transition:none}}
+/* v11: pet chat + AI access controls */
+.chat-log { max-height: 320px; overflow-y: auto; margin: 0.5em 0; }
+.chat-line { margin: 0.45em 0; }
+.ai-access-row { display: flex; flex-wrap: wrap; gap: 0.4em 1em; align-items: center; padding: 0.45em 0; border-bottom: 1px solid rgba(0,0,0,0.08); }
+.ai-access-cell { display: inline-flex; align-items: center; gap: 0.25em; font-size: 0.95em; }
+.toggle-row { display: flex; gap: 0.5em; align-items: center; margin: 0.6em 0; font-weight: 600; }

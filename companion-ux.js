@@ -84,7 +84,17 @@
     return out;
   }
 
+  /* Pet experience (v12): the pet earns experience when it helps. The
+   * level is the pet's growth — displayed proudly, never a user score. */
+  var XP_THRESHOLDS = [0, 50, 150, 300, 500, 800, 1200, 1800, 2600, 4000];
+  function xpLevel(xp) {
+    var lvl = 1;
+    for (var i = 0; i < XP_THRESHOLDS.length; i++) if ((xp || 0) >= XP_THRESHOLDS[i]) lvl = i + 1;
+    return lvl;
+  }
+
   var api = {
+    xpLevel: xpLevel,
     getGreeting: getGreeting,
     momentumScore: momentumScore, momentumWords: momentumWords,
     generateMicroSteps: generateMicroSteps,
