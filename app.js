@@ -264,6 +264,7 @@
         suggestGrounding: false,
         celebrateBoost: false
       },
+      supportNeeds: null, /* traits.js support-needs scores + top supports (v9); null until computed */
       log: [] /* plain-language entries: { date, text } — shown in the Learned view */
     };
   }
@@ -409,7 +410,49 @@
       ad.suggestGrounding = true;
       learnLog(state, 'You use the grounding tools, so they now stay near the top of your day.', now);
     }
+    computeSupportNeeds(state, now);
     return ad;
+  }
+
+  /* Support-needs model (traits.js, installed v9 from Daniel's research
+   * briefs): score which kinds of help the pet should offer MORE of,
+   * from check-in patterns only — tasks and days, never claims about the
+   * person. Guarded like every learning function: nothing is computed
+   * while learning is off, and nothing at all without the traits library.
+   * Scores live inside learning state (visible and wipeable in the
+   * Learned view); the user only ever sees plain words, never numbers
+   * or labels. When the top support changes, the change is logged in
+   * plain language like every other adaptation — nothing invisible. */
+  function computeSupportNeeds(state, now) {
+    if (!state.learningEnabled) return null;
+    var lib = (typeof window !== 'undefined' && window.ROOTLING_SUPPORT) ||
+              (typeof globalThis !== 'undefined' && globalThis.ROOTLING_SUPPORT);
+    if (!lib) return state.learning.supportNeeds || null;
+    var sig = state.learning.signals;
+    var shown = 0, done = 0, skippedTotal = 0, t;
+    for (t in sig.byType) { shown += sig.byType[t].shown; done += sig.byType[t].done; }
+    for (t in (sig.skippedDays || {})) skippedTotal += sig.skippedDays[t];
+    var scores = lib.scoreSupportNeeds({
+      shown: shown, done: done, skippedTotal: skippedTotal,
+      moodSkipped: (sig.skippedDays && sig.skippedDays.mood) || 0,
+      calmUsed: sig.calmUsed || 0, groundingUsed: sig.groundingUsed || 0,
+      daysObserved: sig.daysObserved || 0,
+      fixedPrompts: state.learning.adaptations.promptStyle === 'fixed'
+    });
+    var top = lib.topSupports(scores, 3);
+    var prev = state.learning.supportNeeds;
+    var oldTop = prev && prev.top && prev.top.length ? prev.top[0] : null;
+    state.learning.supportNeeds = {
+      scores: scores,
+      top: top.map(function (r) { return r.id; }),
+      date: todayKey(now)
+    };
+    var newTop = top.length ? top[0].id : null;
+    if (newTop && newTop !== oldTop) {
+      var sup = lib.supportById(newTop);
+      if (sup) learnLog(state, 'A way your pet helps most now: ' + sup.name + ' — ' + sup.line, now);
+    }
+    return state.learning.supportNeeds;
   }
 
   function hourLabel(h) {
@@ -448,6 +491,21 @@
     if (ad.suggestGrounding) facts.push('Grounding tools stay near the top of your day, because you use them.');
     if (sig.groundingUsed > 0) facts.push('Grounding tools used ' + sig.groundingUsed + ' time(s).');
     if (sig.calmUsed > 0) facts.push('Calm mode turned on ' + sig.calmUsed + ' time(s).');
+    var sn = state.learning.supportNeeds;
+    if (sn && sn.top && sn.top.length && typeof window !== 'undefined' && window.ROOTLING_SUPPORT) {
+      var topNames = [];
+      for (var ti = 0; ti < Math.min(2, sn.top.length); ti++) {
+        var topSup = window.ROOTLING_SUPPORT.supportById(sn.top[ti]);
+        if (topSup) topNames.push(topSup.name);
+      }
+      if (topNames.length) {
+        facts.push('Ways your pet helps most: ' + topNames.join(' and ') + '. These come from your check-in patterns on this device. They are ways to help — not labels about you.');
+      }
+      if (sn.scores && typeof sn.scores.feelings === 'number' && sn.scores.feelings >= 70 && sig.daysObserved >= 7) {
+        var esc0 = window.ROOTLING_SUPPORT.ESCALATION[0];
+        if (esc0) facts.push(esc0.line);
+      }
+    }
     var anyAdaptation = !!ad.demandLevel || !!ad.promptStyle || Object.keys(ad.microTypes).length > 0 || !!ad.celebrateBoost || !!ad.suggestGrounding || (ad.bestHour !== null && ad.bestHour !== undefined);
     if (anyAdaptation) facts.push('Your chosen support style always comes first: learning only fills in wording or ask size where your style did not already set them, and it never changes previews or calm mode you chose.');
     for (var i = 0; i < state.learning.log.length; i++) facts.push(state.learning.log[i].text);
