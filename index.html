@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2e7d5b">
-<meta name="description" content="Rootling — your tiny self-care friend. Choose a plant or animal companion, pick the support style that helps you, and grow together with gentle daily check-ins. Your pet, check-ins, and learning stay on your device; optional connected helpers are off by default and labeled. A Live Well companion.">
+<meta name="description" content="Rootling — your tiny self-care friend. Adopt and collect companions — pets, plants, mythical creatures, spirits, robots, and alien lifeforms — pick a personality, and grow together with gentle daily check-ins. Your companions, check-ins, and learning stay on your device; optional connected helpers are off by default and labeled. A Live Well companion.">
 <title>Rootling — your tiny self-care friend · Live Well</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -101,44 +101,139 @@
     </div>
 
     <form id="adopt-form">
-      <fieldset class="picker">
-        <legend>Choose your companion</legend>
-        <div class="picker-row" role="radiogroup" aria-label="Companion form">
-          <button type="button" class="picker-btn selected" data-form-choice="plant" role="radio" aria-checked="true">
-            <img src="assets/sprout-sprout.svg" alt="" width="72" height="72">
-            <span>🌱 Plant companion</span>
+      <!-- Adopt steps (2026-10-15 collection rebuild): cards, not forms.
+           Step 1 personality, step 2 companion kind + species, step 3
+           name. companions.js walks the steps; without it, all steps
+           simply show one under another and the form still works. -->
+      <div class="adopt-step" data-adopt-step="1">
+        <h3>First — pick a personality</h3>
+        <p class="gentle">Tap one card. This is how your companion talks and plays.</p>
+        <div class="pick-grid" role="radiogroup" aria-label="Companion personality">
+          <button type="button" class="pick-card selected" data-personality="friendly" role="radio" aria-checked="true">
+            <span class="pick-emoji" aria-hidden="true">😊</span>
+            <span class="pick-name">Friendly</span>
+            <span class="pick-sub">“I’m happiest making new friends.”</span>
           </button>
-          <button type="button" class="picker-btn" data-form-choice="animal" role="radio" aria-checked="false">
-            <img src="assets/creature-cub.svg" alt="" width="72" height="72">
-            <span>🐾 Animal companion</span>
+          <button type="button" class="pick-card" data-personality="scholar" role="radio" aria-checked="false">
+            <span class="pick-emoji" aria-hidden="true">🧠</span>
+            <span class="pick-name">Scholar</span>
+            <span class="pick-sub">“I love learning new things.”</span>
+          </button>
+          <button type="button" class="pick-card" data-personality="adventurer" role="radio" aria-checked="false">
+            <span class="pick-emoji" aria-hidden="true">⚔️</span>
+            <span class="pick-name">Adventurer</span>
+            <span class="pick-sub">“Let’s explore the world together.”</span>
+          </button>
+          <button type="button" class="pick-card" data-personality="comedian" role="radio" aria-checked="false">
+            <span class="pick-emoji" aria-hidden="true">🎭</span>
+            <span class="pick-name">Comedian</span>
+            <span class="pick-sub">“I promise terrible jokes.”</span>
+          </button>
+          <button type="button" class="pick-card" data-personality="guardian" role="radio" aria-checked="false">
+            <span class="pick-emoji" aria-hidden="true">🛡️</span>
+            <span class="pick-name">Guardian</span>
+            <span class="pick-sub">“I’ll always have your back.”</span>
+          </button>
+          <button type="button" class="pick-card" data-personality="leader" role="radio" aria-checked="false">
+            <span class="pick-emoji" aria-hidden="true">💎</span>
+            <span class="pick-name">Leader</span>
+            <span class="pick-sub">“Follow me — I know a good path.”</span>
+          </button>
+          <button type="button" class="pick-card" data-personality="dreamer" role="radio" aria-checked="false">
+            <span class="pick-emoji" aria-hidden="true">🌙</span>
+            <span class="pick-name">Dreamer</span>
+            <span class="pick-sub">“I dream in colours you have never seen.”</span>
+          </button>
+          <button type="button" class="pick-card" data-personality="competitive" role="radio" aria-checked="false">
+            <span class="pick-emoji" aria-hidden="true">🔥</span>
+            <span class="pick-name">Competitive</span>
+            <span class="pick-sub">“A friendly race? Always.”</span>
+          </button>
+          <button type="button" class="pick-card" data-personality="empath" role="radio" aria-checked="false">
+            <span class="pick-emoji" aria-hidden="true">❤️</span>
+            <span class="pick-name">Empath</span>
+            <span class="pick-sub">“I remember how you feel.”</span>
+          </button>
+          <button type="button" class="pick-card" data-personality="creative" role="radio" aria-checked="false">
+            <span class="pick-emoji" aria-hidden="true">🎨</span>
+            <span class="pick-name">Creative</span>
+            <span class="pick-sub">“Give me a blank page and watch.”</span>
+          </button>
+          <button type="button" class="pick-card" data-personality="custom" role="radio" aria-checked="false">
+            <span class="pick-emoji" aria-hidden="true">🌟</span>
+            <span class="pick-name">Custom</span>
+            <span class="pick-sub">“A blend of everything — uniquely yours.”</span>
           </button>
         </div>
-      </fieldset>
+      </div>
 
-      <label for="pet-name-input">What would you like to name your companion?</label>
-      <input id="pet-name-input" name="pet-name" type="text" maxlength="24" autocomplete="off"
-             placeholder="e.g. Fern, Pico, Sunshine…">
+      <div class="adopt-step" data-adopt-step="2">
+        <h3>Now — choose your companion</h3>
+        <p class="gentle">Tap a kind, then tap your companion.</p>
+        <div class="pick-grid" role="radiogroup" aria-label="Companion kind">
+          <button type="button" class="picker-btn pick-card selected" data-form-choice="plant" data-category="plants" role="radio" aria-checked="true">
+            <img src="assets/sprout-sprout.svg" alt="" width="72" height="72">
+            <span class="pick-name">🌱 Plants</span>
+          </button>
+          <button type="button" class="picker-btn pick-card" data-form-choice="animal" data-category="pets" role="radio" aria-checked="false">
+            <img src="assets/creature-cub.svg" alt="" width="72" height="72">
+            <span class="pick-name">🐾 Pets</span>
+          </button>
+          <button type="button" class="pick-card" data-category="mythical" role="radio" aria-checked="false">
+            <span class="pick-emoji" aria-hidden="true">🐉</span>
+            <span class="pick-name">Mythical Creatures</span>
+          </button>
+          <button type="button" class="pick-card" data-category="spirits" role="radio" aria-checked="false">
+            <span class="pick-emoji" aria-hidden="true">✨</span>
+            <span class="pick-name">Spirits</span>
+          </button>
+          <button type="button" class="pick-card" data-category="robots" role="radio" aria-checked="false">
+            <span class="pick-emoji" aria-hidden="true">🤖</span>
+            <span class="pick-name">Robots</span>
+          </button>
+          <button type="button" class="pick-card" data-category="aliens" role="radio" aria-checked="false">
+            <span class="pick-emoji" aria-hidden="true">👽</span>
+            <span class="pick-name">Alien Lifeforms</span>
+          </button>
+        </div>
+        <div class="pick-grid species-grid" id="adopt-species-grid" role="radiogroup" aria-label="Companion species"></div>
+      </div>
 
-      <label for="adopt-profile-select">What kind of support helps you?</label>
-      <select id="adopt-profile-select" name="profile" aria-describedby="adopt-profile-help">
-        <option value="companion">Just a companion</option>
-        <option value="focus">Focus &amp; momentum (ADHD-friendly)</option>
-        <option value="calm">Calm &amp; predictable (autism-friendly)</option>
-        <option value="grounding">Grounding &amp; safety (PTSD-friendly)</option>
-        <option value="lowdemand">Low-demand days (anxiety/depression-friendly)</option>
-        <option value="adaptive">Let my companion learn</option>
-      </select>
-      <p class="fineprint" id="adopt-profile-help">These are support styles, not labels. You can change this any time — nothing about you is ever guessed or diagnosed.</p>
-      <p class="fineprint" id="adopt-profile-tagline" aria-live="polite"></p>
+      <div class="adopt-step" data-adopt-step="3">
+        <h3>Last — name your companion</h3>
+        <p class="gentle">Your new friend says: “I hope it’s something cool.”</p>
+        <p class="q" id="adopt-identity-preview" role="status"></p>
 
-      <label class="check-row" for="adopt-learn-checkbox">
-        <input type="checkbox" id="adopt-learn-checkbox">
-        <span>Also let my companion learn from how I use it (on this device only) and adjust its style</span>
-      </label>
+        <label for="pet-name-input">What would you like to name your companion?</label>
+        <input id="pet-name-input" name="pet-name" type="text" maxlength="24" autocomplete="off"
+               placeholder="e.g. Fern, Pico, Sunshine…">
 
-      <button type="submit" class="btn btn-primary">Adopt my Rootling</button>
+        <label for="adopt-profile-select">What kind of support helps you?</label>
+        <select id="adopt-profile-select" name="profile" aria-describedby="adopt-profile-help">
+          <option value="companion">Just a companion</option>
+          <option value="focus">Focus &amp; momentum (ADHD-friendly)</option>
+          <option value="calm">Calm &amp; predictable (autism-friendly)</option>
+          <option value="grounding">Grounding &amp; safety (PTSD-friendly)</option>
+          <option value="lowdemand">Low-demand days (anxiety/depression-friendly)</option>
+          <option value="adaptive">Let my companion learn</option>
+        </select>
+        <p class="fineprint" id="adopt-profile-help">These are support styles, not labels. You can change this any time — nothing about you is ever guessed or diagnosed.</p>
+        <p class="fineprint" id="adopt-profile-tagline" aria-live="polite"></p>
+
+        <label class="check-row" for="adopt-learn-checkbox">
+          <input type="checkbox" id="adopt-learn-checkbox">
+          <span>Also let my companion learn from how I use it (on this device only) and adjust its style</span>
+        </label>
+
+        <button type="submit" class="btn btn-primary">Adopt my Rootling</button>
+      </div>
+
+      <div class="choice-row adopt-nav">
+        <button type="button" class="btn btn-ghost" id="adopt-back-btn">Back</button>
+        <button type="button" class="btn btn-primary" id="adopt-next-btn">Next</button>
+      </div>
     </form>
-    <p class="fineprint">Your pet, check-ins, and anything it learns stay on this device. No account or sign-up is needed for the offline core. Optional connected helpers are off by default, are labeled where they appear, and each one explains exactly what it touches before you turn it on.</p>
+    <p class="fineprint">Your pet, check-ins, and anything it learns stay on this device. Your account lives on this device too — it is never sent anywhere, and signing in just opens your own space here. Optional connected helpers are off by default, are labeled where they appear, and each one explains exactly what it touches before you turn it on.</p>
     <p class="fineprint">Rootling is a self-care companion — not a medical device, not therapy, and not a substitute for professional care. If things ever feel like too much, you deserve support from a person: in the US, call or text <strong>988</strong> — the Suicide and Crisis Lifeline — any time, day or night.</p>
     <button type="button" class="btn btn-soft" id="privacy-adopt-btn">Privacy &amp; your data</button>
   </section>
@@ -197,6 +292,8 @@
         <span id="stage-label" class="stage-label">Seed stage</span>
       </h2>
       <p id="pet-message" class="pet-message" role="status" aria-live="polite"></p>
+      <p id="pet-identity-line" class="gentle" hidden></p>
+      <div id="daily-gift"></div>
 
       <div class="growth">
         <div class="growth-row">
@@ -223,6 +320,68 @@
         </div>
       </dl>
       <p id="rest-note" class="rest-note" hidden></p>
+    </section>
+
+    <!-- Home: four giant buttons (2026-10-15 rebuild). Chat, Play,
+         Adventure, Home — everything else is one more tap away. -->
+    <nav class="dash-actions" aria-label="Main places">
+      <a class="btn btn-primary dash-btn" id="dash-chat-btn" href="#social-view">💬 Chat</a>
+      <a class="btn btn-soft dash-btn" id="dash-play-btn" href="#time-view">🎲 Play</a>
+      <a class="btn btn-soft dash-btn" id="dash-train-btn" href="#adventures-card">🗺️ Adventure</a>
+      <a class="btn btn-soft dash-btn" id="dash-home-btn" href="#main-view">🏠 Home</a>
+    </nav>
+
+    <!-- Adventures: training with story names (2026-10-15). Each one
+         takes you to the real thing in one tap — same systems underneath. -->
+    <section class="card" id="adventures-card" aria-labelledby="adventures-heading">
+      <h3 id="adventures-heading">Adventures</h3>
+      <p class="q">Training, but make it a story. Tap one to go there.</p>
+      <div class="pick-grid">
+        <button type="button" class="pick-card" data-adventure="forest">
+          <span class="pick-emoji" aria-hidden="true">🌲</span>
+          <span class="pick-name">Forest Run</span>
+          <span class="pick-sub">Agility — a moving adventure</span>
+        </button>
+        <button type="button" class="pick-card" data-adventure="puzzle">
+          <span class="pick-emoji" aria-hidden="true">🧩</span>
+          <span class="pick-name">Puzzle Cave</span>
+          <span class="pick-sub">Intelligence — a thinking adventure</span>
+        </button>
+        <button type="button" class="pick-card" data-adventure="mountain">
+          <span class="pick-emoji" aria-hidden="true">⛰️</span>
+          <span class="pick-name">Mountain Climb</span>
+          <span class="pick-sub">Strength — a strong adventure</span>
+        </button>
+        <button type="button" class="pick-card" data-adventure="library">
+          <span class="pick-emoji" aria-hidden="true">📚</span>
+          <span class="pick-name">Library Quest</span>
+          <span class="pick-sub">Focus — a quiet adventure</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Your collection (2026-10-15): every companion you own. The main
+         companion greets you on Home and speaks for your check-ins. -->
+    <section class="card" id="companions-view" aria-labelledby="companions-heading">
+      <h3 id="companions-heading">Your companions</h3>
+      <p class="q">Your collection. Bringing a companion to Home is free, and your main companion stays yours until you pick a new one.</p>
+      <div id="companions-list"></div>
+      <button type="button" class="btn btn-primary" id="adopt-another-btn">Adopt another companion</button>
+      <p class="fineprint">One day, companion packs and extra slots may be offered as extras. Nothing here is locked today: every companion you adopt is fully yours.</p>
+    </section>
+
+    <!-- Change main companion: a warm confirm, never a deletion. The
+         current main stays in the collection with everything it grew. -->
+    <section class="card" id="change-main-confirm" aria-labelledby="change-main-heading" hidden>
+      <h3 id="change-main-heading">Choose a new main companion</h3>
+      <p class="q">Your main companion is the one who greets you on Home and speaks for your check-ins.</p>
+      <p class="q" id="change-main-current"></p>
+      <p class="q">Only want a new name? You do not need a new companion for that — renaming is free and takes one tap.</p>
+      <div class="choice-row">
+        <button type="button" class="btn btn-soft" id="change-main-rename-btn">Rename instead</button>
+        <button type="button" class="btn btn-primary" id="change-main-yes-btn">Yes — choose a new main companion</button>
+        <button type="button" class="btn btn-ghost" id="change-main-no-btn">Not now</button>
+      </div>
     </section>
 
     <!-- Today card: what matters right now, in small chunks only -->
@@ -1165,6 +1324,27 @@
         <p class="fineprint">Learning has its own switch above. It never moves these four choices. Only you do.</p>
         <p class="fineprint" id="support-status" role="status" aria-live="polite"></p>
       </fieldset>
+      <fieldset class="settings-group" id="care-style-fieldset">
+        <legend>Care style</legend>
+        <p class="q">How fast your companion grows, and how often it asks for care moments. In every style, your companion never suffers, never fades, and never makes you feel bad about a missed day. Styles change pacing and rewards only — never punishment.</p>
+        <label class="check-row" for="care-style-casual">
+          <input type="radio" name="care-style" id="care-style-casual" value="casual">
+          <span>🌿 Casual — low upkeep, standard pace, kind to busy days</span>
+        </label>
+        <label class="check-row" for="care-style-balanced">
+          <input type="radio" name="care-style" id="care-style-balanced" value="balanced" checked>
+          <span>🌱 Balanced — the standard pace</span>
+        </label>
+        <label class="check-row" for="care-style-dedicated">
+          <input type="radio" name="care-style" id="care-style-dedicated" value="dedicated">
+          <span>🌟 Dedicated — more care moments, grows a little faster</span>
+        </label>
+        <label class="check-row" for="care-style-hardcore">
+          <input type="radio" name="care-style" id="care-style-hardcore" value="hardcore">
+          <span>🔥 Hardcore — daily care matters, fastest growing, still zero punishment</span>
+        </label>
+        <p class="fineprint" id="care-style-status" role="status" aria-live="polite"></p>
+      </fieldset>
     </section>
 
     <!-- Settings split into short named cards at integration (USABILITY-MAP fix) -->
@@ -1184,6 +1364,8 @@
         </select>
         <p class="fineprint">This changes how your pet talks. It never changes what your pet promises.</p>
         <p class="fineprint" id="personality-status" role="status" aria-live="polite"></p>
+        <p class="fineprint" id="personality-chosen-line" role="status"></p>
+        <p class="fineprint" id="trait-line" role="status"></p>
       </fieldset>
       <fieldset class="settings-group">
         <legend>Sensory</legend>
@@ -1199,6 +1381,34 @@
           <option value="colour">A plain colour</option>
         </select>
       </fieldset>
+    </section>
+
+    <!-- Rename + change main companion (2026-10-15). companions.js fills
+         the current-companion line and wires the buttons. -->
+    <section class="card" id="companion-manage-card" aria-labelledby="companion-manage-heading">
+      <h3 id="companion-manage-heading">Your companion</h3>
+      <p class="q" id="companion-manage-current">Your main companion greets you on Home.</p>
+      <label for="rename-input">Your companion’s name</label>
+      <input id="rename-input" type="text" maxlength="24" autocomplete="off" placeholder="Your companion’s name">
+      <div class="choice-row">
+        <button type="button" class="btn btn-primary" id="rename-btn">Save new name</button>
+        <button type="button" class="btn btn-soft" id="change-main-btn">Choose a new main companion</button>
+      </div>
+      <p class="fineprint" id="rename-status" role="status" aria-live="polite"></p>
+      <p class="fineprint">Renaming is free and takes effect at once, everywhere. Choosing a new main companion never removes the old one — they stay in your collection with everything they have grown.</p>
+    </section>
+
+    <!-- Your account on this device (2026-10-15). accounts.js fills the
+         summary and wires the buttons; the words here stay true even
+         before it runs. -->
+    <section class="card" id="account-card" aria-labelledby="account-heading">
+      <h3 id="account-heading">Your account on this device</h3>
+      <p class="q" id="account-summary">Accounts live on this device only.</p>
+      <p class="q">Your account keeps your companions in their own space on this device, away from anyone else who uses it. Nothing about your account is sent anywhere. Cloud accounts — with Google, Apple, or Microsoft sign-in — arrive with the connected version of Rootling.</p>
+      <div class="choice-row">
+        <button type="button" class="btn btn-soft" id="account-signout-btn">Sign out</button>
+        <button type="button" class="btn btn-ghost" id="account-delete-btn">Delete this account</button>
+      </div>
     </section>
 
     <section class="card" aria-labelledby="settings-words-heading">
@@ -1348,7 +1558,7 @@
           <a class="btn btn-soft" href="#privacy-policy-heading">Read the Privacy Policy</a>
         </div>
         <div id="privacy-area-deletes"></div>
-        <p class="q">Rootling has no account and no password. There is nothing to sign in to, and your information stays on this device.</p>
+        <p class="q">Your Rootling account lives on this device only, and it is never sent anywhere. Signing in just opens your own space on this device — your information stays here.</p>
         <p class="q">Support: Support contact details will appear here once they are set up.</p>
         <button type="button" class="btn btn-ghost" id="delete-my-data-btn">Delete my data</button>
         <div id="delete-confirm" hidden>
@@ -1368,6 +1578,8 @@
         <p>Rootling keeps things on this device only. It keeps:</p>
         <ul>
           <li>Your pet, its name, and how much it has grown.</li>
+          <li>Your account on this device: your name, your email, and your password kept scrambled — never as plain words.</li>
+          <li>Your companions collection: every companion you adopt, and which one is your main companion.</li>
           <li>Your check-ins (your mood, water, movement, and sleep notes).</li>
           <li>Your settings — the choices you make for how the app looks and acts.</li>
           <li>Things your pet learns about how you use the app, but only if you turn learning on.</li>
@@ -1385,7 +1597,7 @@
           <li>Rootling never uses your information for advertising (ads).</li>
           <li>Rootling never shares your information with anyone, unless you say it may.</li>
           <li>Rootling has no hidden tracking. Tracking means secretly watching what you do. Rootling does not do that.</li>
-          <li>Rootling has no account. You never sign in.</li>
+          <li>Rootling never sends your account, or anything else, from this device to anyone. Your sign-in works on this device only.</li>
           <li>As Rootling works today, the app sends nothing from this device to anyone. Your pet, check-ins, and learning stay here, on this device.</li>
         </ul>
 
@@ -1410,12 +1622,12 @@
         <h4>Who Rootling is for</h4>
         <p>Rootling is made for adults and older teens. If you are under 18, please use it with a parent or guardian who knows you are using it. A guardian is an adult who cares for you and is in charge of your safety.</p>
 
-        <h4>FUTURE: What changes if Rootling adds accounts later</h4>
-        <p>This part is about a possible future. It is not true today.</p>
+        <h4>Your account, and what changes with the connected version</h4>
+        <p>Today, your account lives on this device only. It holds your name, your email, and your password kept scrambled — never as plain words. It is never sent anywhere, and your email is never checked or written to.</p>
         <ul>
-          <li>If accounts are ever added, they would be optional. Optional means you could say no and keep using Rootling as it is now.</li>
-          <li>This policy would be updated first, and shown to you before any sign-up, so you could read it and choose.</li>
-          <li>The things Rootling keeps on this device today would stay on this device, unless you choose to move them.</li>
+          <li>A connected version of Rootling is planned. It would add sign-in with Google, Apple, or Microsoft, email checks, and moving your companions between your devices — only if you choose it.</li>
+          <li>This policy would be updated first, and shown to you before any connected sign-up, so you could read it and choose.</li>
+          <li>The things Rootling keeps on this device today stay on this device, unless you choose to move them.</li>
         </ul>
       </div>
 
@@ -1466,6 +1678,8 @@
   <button type="button" class="btn btn-primary" id="quiet-resume-btn">Back to Rootling</button>
 </section>
 
+<script src="accounts.js"></script>
+<script src="companions.js"></script>
 <script src="app.js"></script>
 <script src="notifications.js"></script>
 </body>

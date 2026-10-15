@@ -29,6 +29,14 @@
 
   var POINTS = { mood: 10, movementLittle: 10, movementLot: 15, sleep: 10, waterPerGlass: 2, waterMaxGlasses: 8 };
 
+  /* Care styles (2026-10-15 collection rebuild): pacing only. Balanced
+   * is the standard pace and changes nothing. Dedicated and Hardcore
+   * grow a companion faster and ask for more care moments; Casual is
+   * the same pace as Balanced with a lighter touch. In EVERY style the
+   * companion never suffers, never fades, and nothing is ever taken
+   * away — the style changes rewards and pacing, never punishment. */
+  var CARE_STYLE_FACTORS = { casual: 1, balanced: 1, dedicated: 1.25, hardcore: 1.5 };
+
   /* ---------- companion forms (Phase 1) ---------- */
   var FORMS = {
     plant: {
@@ -733,6 +741,11 @@
       version: 2,
       petName: '',
       form: 'plant',          /* 'plant' | 'animal' (Phase 1) */
+      category: 'plants',     /* collection kind: plants|pets|mythical|spirits|robots|aliens (2026-10-15) */
+      species: '',            /* chosen species name from the roster, e.g. 'Fox' */
+      companionPersonality: '', /* chosen personality card id, e.g. 'scholar' */
+      identityLine: '',       /* species + personality one-liner made at adoption */
+      careStyle: 'balanced',  /* casual|balanced|dedicated|hardcore — pacing only, never punishment */
       profile: 'companion',   /* support profile id (Phase 2) */
       learningEnabled: false, /* on-device learning opt-in (Phase 2) */
       calmMode: false,        /* reduced motion + muted palette */
@@ -842,6 +855,8 @@
     var day = dayRecord(state, key);
     var stageBefore = stageFor(state.sunshine, state.form).id;
     var wasDone = type === 'water' ? !!(day.water && day.water.glasses > 0) : !!day[type];
+    var sunshineBefore = state.sunshine;
+    var careFactor = CARE_STYLE_FACTORS[state.careStyle] || 1;
 
     if (type === 'mood') {
       if (!day.mood) {
@@ -875,6 +890,12 @@
       }
     } else {
       return { ok: false, reason: 'unknown type' };
+    }
+
+    /* Care-style pacing: Dedicated/Hardcore grow faster. Balanced and
+     * Casual use factor 1, so the standard sunshine math never moves. */
+    if (careFactor !== 1 && state.sunshine !== sunshineBefore) {
+      state.sunshine = sunshineBefore + Math.round((state.sunshine - sunshineBefore) * careFactor);
     }
 
     var isDone = type === 'water' ? (day.water && day.water.glasses > 0) : !!day[type];
@@ -1121,7 +1142,12 @@
     var mood = petMood(state, now, celebrating);
 
     els.petNameDisplay.textContent = state.petName;
-    els.stageLabel.textContent = stage.name + ' stage · ' + (FORMS[state.form] || FORMS.plant).label + ' companion';
+    var stageIdx = stagesFor(state.form).indexOf(stage);
+    els.stageLabel.textContent = stage.name + ' stage · ' + (FORMS[state.form] || FORMS.plant).label + ' companion · Level ' + (stageIdx + 1);
+    if (els.petIdentityLine) {
+      els.petIdentityLine.textContent = state.identityLine || '';
+      els.petIdentityLine.hidden = !state.identityLine;
+    }
     els.sunshineCount.textContent = String(state.sunshine);
 
     /* Message selection. Body-doubling and control framing lead the day
@@ -1205,6 +1231,10 @@
     if (els.learnDisabledNote) els.learnDisabledNote.hidden = !PROFILES[state.profile].forcesLearning;
     if (els.calmCheckbox) els.calmCheckbox.checked = !!state.calmMode;
     if (els.pauseScreenSelect) els.pauseScreenSelect.value = state.pauseScreen || 'blank';
+    var csRadios = document.querySelectorAll('input[name="care-style"]');
+    for (var ci = 0; ci < csRadios.length; ci++) {
+      csRadios[ci].checked = (csRadios[ci].value === (state.careStyle || 'balanced'));
+    }
     if (els.profileTagline) els.profileTagline.textContent = (PROFILES[state.profile] || PROFILES.companion).tagline;
 
     /* Check-in cards */
@@ -1377,6 +1407,26 @@
       state.createdDate = todayKey();
       if (els.adoptProfileSelect) setProfile(state, els.adoptProfileSelect.value);
       if (els.adoptLearnCheckbox) setLearningEnabled(state, els.adoptLearnCheckbox.checked || state.learningEnabled);
+      /* Collection rebuild (2026-10-15): the card steps in companions.js
+       * leave the chosen kind, species, and personality in a pending
+       * note; adoption records them on the pet and in the collection. */
+      try {
+        var pendingRaw = localStorage.getItem('rootling-pending-adopt-v1');
+        var pending = pendingRaw ? JSON.parse(pendingRaw) : null;
+        if (pending) {
+          if (pending.category) state.category = pending.category;
+          if (pending.species) state.species = pending.species;
+          if (pending.personalityId) state.companionPersonality = pending.personalityId;
+          if (pending.identityLine) state.identityLine = pending.identityLine;
+          if (typeof window !== 'undefined' && window.RootlingCompanions && window.RootlingCompanions.registerAdoption) {
+            window.RootlingCompanions.registerAdoption({
+              name: name, form: state.form, category: state.category,
+              species: state.species, personality: state.companionPersonality,
+              identityLine: state.identityLine
+            });
+          }
+        }
+      } catch (e) { /* the adoption itself still stands */ }
       if (PROFILES[state.profile].calmDefault) {
         state.calmMode = true;
         if (state.learningEnabled && state.learning) state.learning.signals.calmUsed += 1;
@@ -1593,6 +1643,18 @@
       });
     }
 
+    /* Care style (2026-10-15): pacing only — see CARE_STYLE_FACTORS. */
+    var careRadios = document.querySelectorAll('input[name="care-style"]');
+    for (var cri = 0; cri < careRadios.length; cri++) {
+      careRadios[cri].addEventListener('change', function () {
+        state.careStyle = this.value;
+        saveState(state);
+        var csStatus = $('care-style-status');
+        if (csStatus) csStatus.textContent = 'Care style saved. Your companion grows at this pace now — and still never suffers on a missed day.';
+        render();
+      });
+    }
+
     els.resetBtn.addEventListener('click', function () {
       var ok = true;
       if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
@@ -1601,6 +1663,9 @@
       if (!ok) return;
       state = defaultState();
       saveState(state);
+      try {
+        if (typeof window !== 'undefined' && window.RootlingCompanions && window.RootlingCompanions.forgetLive) window.RootlingCompanions.forgetLive();
+      } catch (e) { /* the reset itself still stands */ }
       celebrateUntil = 0;
       groundingStep = -1;
       activeGroundSteps = GROUNDING_STEPS;
@@ -1628,6 +1693,7 @@
     els.adoptProfileTagline = $('adopt-profile-tagline');
     els.adoptLearnCheckbox = $('adopt-learn-checkbox');
     els.petNameDisplay = $('pet-name-display');
+    els.petIdentityLine = $('pet-identity-line');
     els.stageLabel = $('stage-label');
     els.petMessage = $('pet-message');
     els.growthText = $('growth-text');
