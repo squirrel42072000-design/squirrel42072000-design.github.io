@@ -41,7 +41,9 @@
     'rootling-companions-v1',
     'rootling-vault-v1',
     'rootling-live-companion-v1',
-    'rootling-pending-adopt-v1'
+    'rootling-pending-adopt-v1',
+    'rootling-assistant-v1',
+    'rootling-assistant-secrets-v1'
   ];
 
   var store = null;

@@ -306,6 +306,30 @@
       <p id="rest-note" class="rest-note" hidden></p>
     </section>
 
+    <!-- Ask your pet (v11, Daniel 2026-10-15): the pet as a helper. Type
+         or talk; commands run on this device. See assistant.js. -->
+    <section class="card ask-card" id="ask-card" aria-labelledby="ask-heading">
+      <div class="ask-head">
+        <h3 id="ask-heading">Ask <span id="ask-pet-name">your pet</span></h3>
+        <span class="ask-level" id="ask-level">Helper level 1</span>
+      </div>
+      <p class="gentle small">Tell me what you need. Try “Check my email”, “Remind me to take my meds at 8”, or “What does research say about ADHD?”</p>
+      <div class="ask-log" id="ask-log" role="log" aria-live="polite" aria-label="Talk with your pet"></div>
+      <div class="ask-timer" id="ask-timer" hidden>
+        <p class="ask-timer-clock" id="ask-timer-clock">0:00</p>
+        <p class="gentle small" id="ask-timer-label"></p>
+        <button type="button" class="btn btn-ghost" id="ask-timer-stop">Stop timer</button>
+      </div>
+      <form class="ask-form" id="ask-form" autocomplete="off">
+        <label for="ask-input" class="sr-only">Ask your pet</label>
+        <input id="ask-input" type="text" maxlength="300" placeholder="Ask or tell me something…" enterkeyhint="send">
+        <button type="button" class="btn btn-soft" id="ask-mic" aria-pressed="false">🎤 Talk</button>
+        <button type="submit" class="btn btn-primary">Ask</button>
+      </form>
+      <div class="ask-chips" id="ask-chips" aria-label="Ideas"></div>
+      <p class="fineprint">Your pet works on this device. It shares research with sources, but it never diagnoses and is not medical advice. In a crisis, call or text <strong>988</strong>.</p>
+    </section>
+
     <!-- Adventures: training with story names (2026-10-15). Each one
          takes you to the real thing in one tap — same systems underneath. -->
     <section class="card" id="adventures-card" aria-labelledby="adventures-heading">
@@ -1296,6 +1320,62 @@
       <button type="button" class="btn btn-soft" id="privacy-toggle">Privacy &amp; your data</button>
     </section>
 
+    <section class="card" id="ask-settings-card" aria-labelledby="ask-settings-heading">
+      <h3 id="ask-settings-heading">Ask your pet: helper settings</h3>
+      <p class="fineprint">Everything here is off or on-device until you change it. Each connected helper says exactly what it touches.</p>
+      <label class="check-row" for="ask-set-speak"><input type="checkbox" id="ask-set-speak"><span>Read my pet’s answers aloud</span></label>
+      <label class="check-row" for="ask-set-proactive"><input type="checkbox" id="ask-set-proactive" checked><span>Show ideas my pet thinks I need right now (learned on this device)</span></label>
+      <label for="ask-set-length">Answer length</label>
+      <select id="ask-set-length">
+        <option value="auto">Let my pet learn what I like</option>
+        <option value="short">Always short</option>
+        <option value="more">Always show more</option>
+      </select>
+      <label for="ask-set-mail">My email</label>
+      <select id="ask-set-mail">
+        <option value="">Ask me the first time</option>
+        <option value="gmail">Gmail</option>
+        <option value="outlook">Outlook</option>
+        <option value="yahoo">Yahoo Mail</option>
+        <option value="icloud">iCloud Mail</option>
+        <option value="proton">Proton Mail</option>
+        <option value="app">My email app</option>
+      </select>
+
+      <details class="ask-details">
+        <summary>Connected helper: read my Gmail and Google Calendar (advanced, off)</summary>
+        <p class="fineprint">With this on, “Check my email” shows your unread count and the newest 5 senders and subjects, and “Plan my day” can add today’s Google Calendar. Access is read-only. Google asks you to allow it each visit. The access pass stays in memory only and is never saved. Rootling never sends, deletes, or stores your email.</p>
+        <p class="fineprint">Set up once (about 10 minutes): 1) Go to console.cloud.google.com and create a project. 2) Turn on the Gmail API and Google Calendar API. 3) Set up the OAuth consent screen (External, Testing) and add your own Google address as a test user. 4) Create an OAuth Client ID of type “Web application” and add this site’s address (for example https://squirrel42072000-design.github.io) under Authorized JavaScript origins. 5) Paste the Client ID below.</p>
+        <label for="ask-set-google">Google OAuth Client ID</label>
+        <input id="ask-set-google" type="text" autocomplete="off" placeholder="1234-abc.apps.googleusercontent.com">
+        <button type="button" class="btn btn-soft" id="ask-set-google-save">Save Google helper</button>
+        <p class="gentle small" id="ask-set-google-msg" role="status"></p>
+      </details>
+
+      <details class="ask-details">
+        <summary>Connected helper: smarter AI brain (advanced, off)</summary>
+        <p class="fineprint">Commands and research notes always work on this device. With a smarter brain, open questions (ones your pet does not know) are sent to the AI service you pick, with your pet’s research notes and your last few messages. Your key is saved only on this device and is left out of memory backups. The service you pick may charge you for use.</p>
+        <label for="ask-set-brain-provider">AI service</label>
+        <select id="ask-set-brain-provider">
+          <option value="openai">OpenAI, or any OpenAI-compatible service</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+        </select>
+        <label for="ask-set-brain-key">API key</label>
+        <input id="ask-set-brain-key" type="password" autocomplete="off" placeholder="Paste your key">
+        <label for="ask-set-brain-model">Model (optional)</label>
+        <input id="ask-set-brain-model" type="text" autocomplete="off" placeholder="e.g. gpt-4o-mini or claude-haiku-4-5">
+        <label for="ask-set-brain-url">Service address (optional, OpenAI-compatible only)</label>
+        <input id="ask-set-brain-url" type="url" autocomplete="off" placeholder="https://api.openai.com/v1">
+        <label class="check-row" for="ask-set-brain-on"><input type="checkbox" id="ask-set-brain-on"><span>Turn on the smarter brain</span></label>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="ask-set-brain-save">Save brain</button>
+          <button type="button" class="btn btn-ghost" id="ask-set-brain-forget">Remove all keys</button>
+        </div>
+        <p class="gentle small" id="ask-set-brain-msg" role="status"></p>
+      </details>
+      <p class="fineprint">To see or wipe what your pet learned about helping you, ask it: “What have you learned?”</p>
+    </section>
+
     <section class="card" id="learned-view" aria-labelledby="learned-heading" hidden>
       <h3 id="learned-heading">What your companion has learned</h3>
       <p class="q">Everything below lives only on this device. Your companion adjusts its support <em>style</em> — it never diagnoses you and never gives you a label you didn't choose.</p>
@@ -1521,7 +1601,9 @@
 <script src="traits.js"></script>
 <script src="burnoutEngine.js"></script>
 <script src="companion-ux.js"></script>
+<script src="research.js"></script>
 <script src="app.js"></script>
 <script src="notifications.js"></script>
+<script src="assistant.js"></script>
 </body>
 </html>
