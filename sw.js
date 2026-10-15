@@ -7,7 +7,7 @@
  * cache-first with runtime caching (e.g. the plant + creature SVG
  * sets). Bump CACHE_VERSION on every release that changes shell files.
  */
-var CACHE_VERSION = 'rootling-v7';
+var CACHE_VERSION = 'rootling-v8';
 var APP_SHELL = [
   './',
   './index.html',
@@ -18,6 +18,10 @@ var APP_SHELL = [
   './notifications.js',
   './manifest.webmanifest',
   './icon.svg',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable-512.png',
+  './apple-touch-icon.png',
   './assets/sprout-placeholder.svg'
 ];
 

@@ -8011,6 +8011,65 @@
     }
   })();
 
+  /* ==== Install — put Rootling on the home screen (2026-10-15) ====
+   * A plain, labeled Install button when the browser offers one
+   * (beforeinstallprompt), short written steps on iPhone/iPad (no
+   * prompt exists there), and a calm "already installed" line when
+   * Rootling is opened from the home screen. Nothing pops up on its
+   * own — the button waits in Settings & Support until tapped. */
+  (function () {
+    var btn = document.getElementById('install-btn');
+    if (!btn) return;
+    var done = document.getElementById('install-done');
+    var ios = document.getElementById('install-ios');
+    var deferred = null;
+    function isInstalled() {
+      try {
+        if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+      } catch (e) { /* fall through */ }
+      return window.navigator.standalone === true;
+    }
+    function refresh() {
+      if (isInstalled()) {
+        btn.hidden = true;
+        if (ios) ios.hidden = true;
+        if (done) done.hidden = false;
+        return;
+      }
+      if (done) done.hidden = true;
+      if (deferred) {
+        btn.hidden = false;
+        if (ios) ios.hidden = true;
+        return;
+      }
+      btn.hidden = true;
+      var ua = window.navigator.userAgent || '';
+      var isIOS = /iphone|ipad|ipod/i.test(ua) ||
+        (ua.indexOf('Macintosh') !== -1 && 'ontouchend' in document);
+      if (ios) ios.hidden = !isIOS;
+    }
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      deferred = e;
+      refresh();
+    });
+    window.addEventListener('appinstalled', function () {
+      deferred = null;
+      refresh();
+    });
+    btn.addEventListener('click', function () {
+      if (!deferred) { refresh(); return; }
+      var d = deferred;
+      deferred = null;
+      btn.hidden = true;
+      d.prompt();
+      if (d.userChoice && typeof d.userChoice.then === 'function') {
+        d.userChoice.then(function () { refresh(); });
+      }
+    });
+    refresh();
+  })();
+
   /* ==== View manager — five tabs (layout pass, 2026-10-15) ====
    * #main-view used to be one mega-page (~16 viewports of scrolling).
    * Now its top-level sections belong to five tabs (Home, Focus,
@@ -8034,7 +8093,7 @@
       'time-view': 'activities', 'adventures-card': 'activities',
       'companions-view': 'companion', 'change-main-confirm': 'companion', 'daily-gift': 'companion',
       'train-view': 'companion',
-      'support-open-row': 'support', 'safety-view': 'support',
+      'support-open-row': 'support', 'safety-view': 'support', 'install-card': 'support',
       'companion-manage-card': 'support', 'account-card': 'support',
       'notifications-card': 'support', 'learned-view': 'support',
       'memory-book': 'support', 'privacy-view': 'support', 'memory-gate': 'support',
@@ -8042,7 +8101,7 @@
     };
     var VIEW_OF_HEADING = {
       'pet-heading': 'home', 'checkins-heading': 'home',
-      'settings-heading': 'support', 'settings-companion-heading': 'support',
+      'settings-heading': 'support', 'settings-companion-heading': 'support', 'install-heading': 'support',
       'settings-words-heading': 'support', 'changes-heading': 'support'
     };
     var currentView = 'home';

@@ -8,6 +8,8 @@
 <title>Rootling — your tiny self-care friend · Live Well</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -1045,6 +1047,22 @@
           <button type="button" class="btn btn-chip" data-time-grown-interval="120">Every 2 hours</button>
         </div>
         <ul id="time-grown-goal-lines" class="learned-list"></ul>
+      </div>
+    </section>
+
+    <!-- Install: put Rootling on the home screen -->
+    <section class="card" id="install-card" aria-labelledby="install-heading">
+      <h3 id="install-heading">Get the Rootling app</h3>
+      <p class="q">Put Rootling on your home screen. It opens like an app, and it works with no internet too.</p>
+      <button type="button" class="btn btn-primary" id="install-btn" hidden>Install Rootling</button>
+      <p class="q" id="install-done" hidden>Rootling is on your home screen. Tap its icon to open it.</p>
+      <div id="install-ios" hidden>
+        <p class="q">On iPhone or iPad:</p>
+        <ol>
+          <li>Tap the Share button in your browser.</li>
+          <li>Tap &ldquo;Add to Home Screen.&rdquo;</li>
+          <li>Tap &ldquo;Add.&rdquo; Rootling is now on your home screen.</li>
+        </ol>
       </div>
     </section>
 
