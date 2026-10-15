@@ -4,11 +4,13 @@
  * that loads successfully, e.g. the plant + creature SVG sets). Bump
  * CACHE_VERSION on every release that changes shell files.
  */
-var CACHE_VERSION = 'rootling-v4';
+var CACHE_VERSION = 'rootling-v5';
 var APP_SHELL = [
   './',
   './index.html',
   './styles.css',
+  './accounts.js',
+  './companions.js',
   './app.js',
   './notifications.js',
   './manifest.webmanifest',
