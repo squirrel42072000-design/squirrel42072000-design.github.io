@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Rootling icon">
+  <rect width="128" height="128" rx="28" fill="#2e7d5b"/>
+  <circle cx="64" cy="46" r="17" fill="#f4b942"/>
+  <path d="M64 92c0-14 0-24 0-34" stroke="#fdf8ef" stroke-width="6" stroke-linecap="round"/>
+  <path d="M64 66c-12 2-20-4-22-16 12-2 20 4 22 16z" fill="#7fb069"/>
+  <path d="M64 58c10 2 18-3 20-14-10-2-18 3-20 14z" fill="#a7c957"/>
+  <path d="M44 98h40l-5 14a6 6 0 0 1-6 4H55a6 6 0 0 1-6-4z" fill="#e07a5f"/>
+  <rect x="40" y="92" width="48" height="8" rx="4" fill="#c95f43"/>
+</svg>

@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2e7d5b">
+<meta name="description" content="Rootling — your tiny self-care friend. Choose a plant or animal companion, pick the support style that helps you, and grow together with gentle daily check-ins. Your pet, check-ins, and learning stay on your device; optional connected helpers are off by default and labeled. A Live Well companion.">
+<title>Rootling — your tiny self-care friend · Live Well</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to the main part</a>
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">🌱</span>
+    <div>
+      <h1>Rootling</h1>
+      <p class="tagline">your tiny self-care friend · Live Well</p>
+    </div>
+  </div>
+  <button type="button" class="btn btn-ghost" id="pause-btn">Pause — leave quietly</button>
+  <button type="button" class="btn btn-ghost" id="help-btn">Help</button>
+  <div class="sunshine-badge" id="sunshine-badge" hidden>
+    <span aria-hidden="true">☀️</span>
+    <span id="sunshine-count">0</span>
+    <span class="sr-only">sunshine points total</span>
+  </div>
+</header>
+
+<main id="main">
+  <!-- ============ FIRST RUN: ADOPT ============ -->
+  <section id="adopt-view" class="card adopt-card" aria-labelledby="adopt-heading" hidden>
+    <img id="adopt-img" class="pet-img adopt-img" src="assets/sprout-seed.svg" alt="A tiny companion waiting to be adopted" width="160" height="160">
+    <h2 id="adopt-heading">Meet your Rootling</h2>
+    <p class="gentle">This little friend grows when you take small moments to care for yourself — a glass of water, a stretch, an honest check-in. No pressure, no guilt. Just gentle growing, together.</p>
+
+    <!-- First-run consent wizard (Worker 4): five short screens, one idea
+         each. Shown only until a consent record exists on this device;
+         returning users with a record go straight to the form / the app. -->
+    <div id="consent-wizard" hidden>
+      <div class="wizard-screen" data-wizard-screen="1">
+        <h3 id="wizard-heading">Welcome to Rootling</h3>
+        <p>Rootling is a small pet that lives on this device. It helps you take small steps to care for yourself. A glass of water counts. A short rest counts. There is no score. Your pet is never sad if you miss a day.</p>
+        <button type="button" class="btn btn-primary" data-wizard-next>Next</button>
+      </div>
+      <div class="wizard-screen" data-wizard-screen="2" hidden>
+        <h3>Your information, in short</h3>
+        <p><strong>Kept on this device:</strong></p>
+        <ul>
+          <li>Your pet and its name</li>
+          <li>Your check-ins</li>
+          <li>Your settings (your choices for how the app looks and acts)</li>
+          <li>Things your pet learns, if you let it learn</li>
+          <li>Words you write in lists or journals in the app</li>
+        </ul>
+        <p><strong>Optional, off unless you turn it on:</strong></p>
+        <ul>
+          <li>Reminders (alerts from your pet)</li>
+          <li>Connected helpers, if any are added later — each one will ask first, in plain words, before it touches anything</li>
+        </ul>
+        <button type="button" class="btn btn-soft" id="wizard-learn-more">Learn more — read the Privacy Policy</button>
+        <div class="choice-row">
+          <button type="button" class="btn btn-ghost" data-wizard-back>Back</button>
+          <button type="button" class="btn btn-primary" data-wizard-next>Next</button>
+        </div>
+      </div>
+      <div class="wizard-screen" data-wizard-screen="3" hidden>
+        <h3>You choose</h3>
+        <p>These are the real switches. What you pick here is what happens.</p>
+        <div id="wizard-learn-slot"></div>
+        <p id="wizard-reminders-line">Reminders: off. Rootling does not send reminders unless you turn them on later, in the app, in the Alerts card.</p>
+        <p>Analytics: Rootling collects none. There is no switch, because there is nothing to switch off. (Analytics means counting how people use an app. Rootling does not do that.)</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-ghost" data-wizard-back>Back</button>
+          <button type="button" class="btn btn-primary" data-wizard-next>Next</button>
+        </div>
+      </div>
+      <div class="wizard-screen" data-wizard-screen="4" hidden>
+        <h3>You do not need to share private things</h3>
+        <p>You do not need to share medical diagnoses, financial information, passwords, or anything private for Rootling to help you. Write only what you are comfortable keeping on this device.</p>
+        <p class="fineprint">A diagnosis is the name a doctor gives to a health problem. You never need to write one here.</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-ghost" data-wizard-back>Back</button>
+          <button type="button" class="btn btn-primary" id="wizard-understand-btn">I Understand</button>
+        </div>
+      </div>
+      <div class="wizard-screen" data-wizard-screen="5" hidden>
+        <h3>Your choices</h3>
+        <p id="consent-summary">Your choices will be listed here.</p>
+        <label class="check-row" for="consent-confirm-checkbox">
+          <input type="checkbox" id="consent-confirm-checkbox">
+          <span>I understand how my data will be used</span>
+        </label>
+        <div class="choice-row">
+          <button type="button" class="btn btn-primary" id="consent-accept-btn" disabled>Accept and meet my Rootling</button>
+          <button type="button" class="btn btn-ghost" id="consent-review-btn">Review Choices</button>
+        </div>
+      </div>
+    </div>
+
+    <form id="adopt-form">
+      <fieldset class="picker">
+        <legend>Choose your companion</legend>
+        <div class="picker-row" role="radiogroup" aria-label="Companion form">
+          <button type="button" class="picker-btn selected" data-form-choice="plant" role="radio" aria-checked="true">
+            <img src="assets/sprout-sprout.svg" alt="" width="72" height="72">
+            <span>🌱 Plant companion</span>
+          </button>
+          <button type="button" class="picker-btn" data-form-choice="animal" role="radio" aria-checked="false">
+            <img src="assets/creature-cub.svg" alt="" width="72" height="72">
+            <span>🐾 Animal companion</span>
+          </button>
+        </div>
+      </fieldset>
+
+      <label for="pet-name-input">What would you like to name your companion?</label>
+      <input id="pet-name-input" name="pet-name" type="text" maxlength="24" autocomplete="off"
+             placeholder="e.g. Fern, Pico, Sunshine…">
+
+      <label for="adopt-profile-select">What kind of support helps you?</label>
+      <select id="adopt-profile-select" name="profile" aria-describedby="adopt-profile-help">
+        <option value="companion">Just a companion</option>
+        <option value="focus">Focus &amp; momentum (ADHD-friendly)</option>
+        <option value="calm">Calm &amp; predictable (autism-friendly)</option>
+        <option value="grounding">Grounding &amp; safety (PTSD-friendly)</option>
+        <option value="lowdemand">Low-demand days (anxiety/depression-friendly)</option>
+        <option value="adaptive">Let my companion learn</option>
+      </select>
+      <p class="fineprint" id="adopt-profile-help">These are support styles, not labels. You can change this any time — nothing about you is ever guessed or diagnosed.</p>
+      <p class="fineprint" id="adopt-profile-tagline" aria-live="polite"></p>
+
+      <label class="check-row" for="adopt-learn-checkbox">
+        <input type="checkbox" id="adopt-learn-checkbox">
+        <span>Also let my companion learn from how I use it (on this device only) and adjust its style</span>
+      </label>
+
+      <button type="submit" class="btn btn-primary">Adopt my Rootling</button>
+    </form>
+    <p class="fineprint">Your pet, check-ins, and anything it learns stay on this device. No account or sign-up is needed for the offline core. Optional connected helpers are off by default, are labeled where they appear, and each one explains exactly what it touches before you turn it on.</p>
+    <p class="fineprint">Rootling is a self-care companion — not a medical device, not therapy, and not a substitute for professional care. If things ever feel like too much, you deserve support from a person: in the US, call or text <strong>988</strong> — the Suicide and Crisis Lifeline — any time, day or night.</p>
+    <button type="button" class="btn btn-soft" id="privacy-adopt-btn">Privacy &amp; your data</button>
+  </section>
+
+  <!-- ============ MAIN VIEW ============ -->
+  <div id="main-view" hidden>
+
+    <nav class="quick-actions" aria-label="Change how Rootling supports you">
+      <button type="button" class="btn btn-primary" id="dash-safety-btn">I need support now</button>
+      <a class="btn btn-soft" href="#time-view">🎲 Pick an Activity</a>
+      <a class="btn btn-soft" href="#settings-heading">Support &amp; sensory settings</a>
+      <a class="btn btn-soft" href="#changes-heading">What has changed</a>
+    </nav>
+
+    <!-- Help and explain: plain words, one tap to open, one tap to close -->
+    <section class="card" id="help-panel" aria-labelledby="help-heading" hidden>
+      <h3 id="help-heading">Help</h3>
+      <p class="q">What is this app? Rootling is a small pet on this device. You do small kind things for yourself. Your pet grows a little as you do.</p>
+      <p class="q">Tap a line below. Then tap Show me. Rootling will take you to that part.</p>
+      <div class="choice-row">
+        <button type="button" class="btn btn-soft" id="help-read-btn" hidden>Read this aloud</button>
+        <button type="button" class="btn btn-ghost" id="help-close-btn">Close help</button>
+      </div>
+      <p class="q">Check-ins: Tap one small card. That is all. One is enough.</p>
+      <button type="button" class="btn btn-soft" data-help-target="checkins-heading">Show me</button>
+      <p class="q">Today card: It shows your one thing for today. It also shows what is next.</p>
+      <button type="button" class="btn btn-soft" data-help-target="today-card">Show me</button>
+      <p class="q">Focus: Sit with your pet. Work on one thing. A timer shows the time. You can stop at any time.</p>
+      <button type="button" class="btn btn-soft" data-help-target="exec-view">Show me</button>
+      <p class="q">Plans and reminders: Your pet holds your plans for the day. Reminders stay off until you turn them on.</p>
+      <button type="button" class="btn btn-soft" data-help-target="notifications-card" data-help-fallback="settings-heading">Show me</button>
+      <p class="q">Grounding tools: These help in a wobbly moment. Pick one. You can stop at any time.</p>
+      <button type="button" class="btn btn-soft" data-help-target="grounding-card">Show me</button>
+      <p class="q">Settings: Change how your pet helps you. You can change things back at any time.</p>
+      <button type="button" class="btn btn-soft" data-help-target="settings-heading">Show me</button>
+      <p class="q">Support now — if things feel like too much, tap this. It has calm tools and your own list of people to call or text.</p>
+      <button type="button" class="btn btn-primary" id="help-safety-btn" hidden>I need support now</button>
+    </section>
+
+    <!-- One gentle help offer, at most once per visit, never a judgment -->
+    <section class="card" id="stuck-offer" aria-labelledby="stuck-heading" hidden>
+      <h3 id="stuck-heading">Need help?</h3>
+      <p class="q">It looks like this might be frustrating. Would you like me to show you?</p>
+      <div class="choice-row">
+        <button type="button" class="btn btn-primary" id="stuck-show-btn">Show me</button>
+        <button type="button" class="btn btn-ghost" id="stuck-no-btn">No thanks</button>
+      </div>
+    </section>
+
+    <section class="card pet-card" aria-labelledby="pet-heading">
+      <div class="pet-stage-wrap">
+        <img id="pet-img" class="pet-img" src="assets/sprout-seed.svg"
+             alt="Your Rootling companion" width="200" height="200">
+      </div>
+      <h2 id="pet-heading"><span id="pet-name-display">Rootling</span>
+        <span id="stage-label" class="stage-label">Seed stage</span>
+      </h2>
+      <p id="pet-message" class="pet-message" role="status" aria-live="polite"></p>
+
+      <div class="growth">
+        <div class="growth-row">
+          <span id="growth-text">0 sunshine to the next stage</span>
+        </div>
+        <div class="progress" role="progressbar" aria-label="Progress to next growth stage"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="growth-bar-wrap">
+          <div class="progress-fill" id="growth-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <dl class="stats">
+        <div class="stat">
+          <dt>Day streak</dt>
+          <dd><span id="streak-count">0</span> <span aria-hidden="true">🔥</span></dd>
+        </div>
+        <div class="stat">
+          <dt>Total days cared</dt>
+          <dd id="total-care-days">0</dd>
+        </div>
+        <div class="stat">
+          <dt>Today</dt>
+          <dd><span id="today-count">0</span> / 4 check-ins</dd>
+        </div>
+      </dl>
+      <p id="rest-note" class="rest-note" hidden></p>
+    </section>
+
+    <!-- Today card: what matters right now, in small chunks only -->
+    <section class="card" id="today-card" aria-labelledby="today-heading">
+      <h3 id="today-heading">Today</h3>
+      <p class="q">What is this? This card shows what matters most right now. Just this. Nothing else.</p>
+      <p class="q" id="today-first-run" hidden>New here? Pick one check-in below — that is all Rootling asks. Your pet grows a little each day you do any one of them.</p>
+      <p class="q">My one thing for today:</p>
+      <p id="today-priority-text" role="status">No one thing yet. You can add one below.</p>
+      <form id="today-priority-form">
+        <label for="today-priority-input">Write your one thing</label>
+        <input id="today-priority-input" class="voice-target" type="text" maxlength="120" autocomplete="off" placeholder="One thing, in your own words">
+        <button type="submit" class="btn btn-primary">Save my one thing</button>
+      </form>
+      <p class="fineprint" id="today-priority-msg" role="status"></p>
+      <p class="q">Now: <span id="today-now-text">Nothing scheduled. A gentle day.</span></p>
+      <div id="today-anchor-wrap" hidden>
+        <p id="today-anchor-text" role="status"></p>
+        <button type="button" class="btn btn-primary" id="today-resume-btn">Pick it back up</button>
+      </div>
+      <p class="q" id="today-next-event" hidden></p>
+      <p class="q" id="today-next-reminder" hidden></p>
+      <p class="q" id="today-mood" hidden></p>
+      <form id="today-capture-form">
+        <label for="today-capture-input">A new thought pops up? Park it here. Your pet will hold it.</label>
+        <input id="today-capture-input" class="voice-target" type="text" maxlength="200" autocomplete="off" placeholder="Write the thought here">
+        <button type="submit" class="btn btn-primary">Catch it &amp; park it</button>
+      </form>
+      <p class="fineprint" id="today-capture-msg" role="status"></p>
+      <button type="button" class="btn btn-soft" id="today-focus-btn">Start a focus session</button>
+    </section>
+
+    <!-- Preview (predictability profiles): what today looks like, up front -->
+    <section class="card" id="preview-card" aria-labelledby="preview-heading" hidden>
+      <h3 id="preview-heading">Here's what today looks like</h3>
+      <p class="q">The same four check-ins as always. Nothing new will appear later.</p>
+      <p class="q">Most check-ins take less than a minute. Today is finished when these four are done — or when you decide to stop. Both count as the end of today.</p>
+      <ul id="preview-list" class="preview-list"></ul>
+    </section>
+
+    <!-- Focus, plans and big tasks: one thing at a time, held by your pet -->
+    <section class="card" id="exec-view" aria-labelledby="exec-heading">
+      <h3 id="exec-heading">Focus, plans and big tasks</h3>
+      <p class="q">What is this? This part holds your plans for today. It helps you work on one thing at a time.</p>
+
+      <div id="exec-anchor-wrap" hidden>
+        <p id="exec-anchor-text" role="status"></p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-primary" id="exec-resume-btn">Pick it back up</button>
+          <button type="button" class="btn btn-ghost" id="exec-anchor-later-btn">Not now — keep holding it</button>
+        </div>
+      </div>
+
+      <h4>Sit and focus</h4>
+      <p class="fineprint" id="exec-presence-note"></p>
+      <img id="exec-pet-img" class="pet-img" src="assets/sprout-seed.svg" alt="Your pet sits with you" width="120" height="120">
+      <label for="exec-focus-task">What are you working on?</label>
+      <input id="exec-focus-task" class="voice-target" type="text" maxlength="120" autocomplete="off" placeholder="One thing, in your own words">
+      <p class="q">How long? Tap one, or write your own number of minutes.</p>
+      <div class="choice-row" role="group" aria-label="How long to focus">
+        <button type="button" class="btn btn-chip" data-focus-min="5">5 minutes</button>
+        <button type="button" class="btn btn-chip" data-focus-min="10">10 minutes</button>
+        <button type="button" class="btn btn-chip" data-focus-min="25">25 minutes</button>
+      </div>
+      <label for="exec-focus-custom">My own minutes</label>
+      <input id="exec-focus-custom" type="number" min="1" max="180" inputmode="numeric" placeholder="e.g. 15">
+      <button type="button" class="btn btn-primary" id="exec-focus-start">Start focus</button>
+      <div id="exec-focus-live" hidden>
+        <p id="exec-focus-status" role="status" aria-live="polite"></p>
+        <div class="progress" role="progressbar" aria-label="Time gone in this focus time" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="exec-focus-bar-wrap">
+          <div class="progress-fill" id="exec-focus-fill" style="width:0%"></div>
+        </div>
+        <p class="q" id="exec-focus-time" role="status"></p>
+        <button type="button" class="btn btn-primary" id="exec-focus-stop">Stop</button>
+      </div>
+      <p class="fineprint" id="exec-focus-msg" role="status"></p>
+
+      <h4>Plans for today</h4>
+      <p class="q">Your pet holds these plans. You do not have to hold them in your head.</p>
+      <ul id="exec-event-list"></ul>
+      <p class="q" id="exec-event-empty">No plans yet today.</p>
+      <form id="exec-event-form">
+        <label for="exec-event-title">What is it?</label>
+        <input id="exec-event-title" class="voice-target" type="text" maxlength="120" autocomplete="off" placeholder="e.g. Dentist">
+        <label for="exec-event-time">What time?</label>
+        <input id="exec-event-time" type="time">
+        <label for="exec-event-leaveby">Leave by (you can leave this blank)</label>
+        <input id="exec-event-leaveby" type="time">
+        <button type="submit" class="btn btn-primary">Save this plan</button>
+      </form>
+      <p class="fineprint" id="exec-event-msg" role="status"></p>
+
+      <h4>Break a big task into small steps</h4>
+      <label for="exec-break-title">What is the big task?</label>
+      <input id="exec-break-title" class="voice-target" type="text" maxlength="120" autocomplete="off" placeholder="e.g. Tidy the desk">
+      <button type="button" class="btn btn-primary" id="exec-break-create">Start</button>
+      <div id="exec-break-build" hidden>
+        <p class="q" id="exec-break-build-q">What is the very first tiny step?</p>
+        <p class="hint">Make it small. Small enough to do in about 15 minutes or less.</p>
+        <label for="exec-break-step-input">Write one small step</label>
+        <input id="exec-break-step-input" class="voice-target" type="text" maxlength="120" autocomplete="off">
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="exec-break-step-add">Add this step</button>
+          <button type="button" class="btn btn-primary" id="exec-break-do-start">Start doing the steps</button>
+        </div>
+        <ul id="exec-break-steps-so-far"></ul>
+      </div>
+      <div id="exec-break-doing" hidden>
+        <p class="q" id="exec-break-doing-title"></p>
+        <p class="q">This step:</p>
+        <p id="exec-break-current-step"></p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-ghost" id="exec-break-back">Back</button>
+          <button type="button" class="btn btn-primary" id="exec-break-done">Done — next step</button>
+          <button type="button" class="btn btn-soft" id="exec-break-park">Park this task</button>
+        </div>
+      </div>
+      <p class="fineprint" id="exec-break-msg" role="status"></p>
+      <p class="q">Your saved tasks</p>
+      <ul id="exec-break-list"></ul>
+
+      <h4>Parked thoughts</h4>
+      <button type="button" class="btn btn-soft" id="exec-loops-toggle">See the thoughts I parked</button>
+      <div id="exec-loops-wrap" hidden>
+        <p class="q" id="exec-loops-count"></p>
+        <ul id="exec-loops-list"></ul>
+        <p class="fineprint" id="exec-loops-msg" role="status"></p>
+      </div>
+    </section>
+
+    <!-- Grounding tools (grounding profile / learned suggestion).
+         A menu of options, not one prescribed technique: 5-4-3-2-1 is one
+         choice among several. Every tool can be stopped at any point —
+         stopping changes nothing. No timers, no scores. -->
+    <section class="card" id="grounding-card" aria-labelledby="grounding-heading" hidden>
+      <div class="checkin-head">
+        <h3 id="grounding-heading">🕊️ Grounding tools</h3>
+      </div>
+      <p class="q">For wobbly moments. Pick whichever tool helps you — they are listed in no special order, and none of them is the "right" one. Slow, quiet, and you can stop at any point — leaving is always allowed, and stopping changes nothing.</p>
+      <div class="choice-row">
+        <button type="button" class="btn btn-soft" id="ground-start">Notice 5-4-3-2-1</button>
+        <button type="button" class="btn btn-soft" id="ground-orient-start">Look around — where am I?</button>
+        <button type="button" class="btn btn-soft" id="ground-cold-start">Cold water</button>
+        <button type="button" class="btn btn-soft" id="breath-start">Paced breathing</button>
+      </div>
+      <p class="q">About paced breathing: it focuses on your breath. If that ever feels worse, stop straight away and pick a different tool.</p>
+      <div id="grounding-panel" hidden>
+        <p id="grounding-text" class="grounding-text" role="status" aria-live="polite"></p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-primary" id="ground-next">Next</button>
+          <button type="button" class="btn btn-ghost" id="ground-stop">Stop — that's enough</button>
+        </div>
+      </div>
+      <div id="breathing-panel" hidden>
+        <p id="breathing-text" class="grounding-text" role="status" aria-live="polite"></p>
+        <button type="button" class="btn btn-ghost" id="breath-stop">Stop breathing exercise</button>
+      </div>
+    </section>
+
+    <section class="checkins" aria-labelledby="checkins-heading">
+      <h2 id="checkins-heading" class="section-title">Today's gentle check-ins</h2>
+      <p class="gentle small" id="checkins-intro">Any one of these is enough. Small counts. Each check-in gives your companion a little sunshine — once a day each.</p>
+      <p id="demand-note" class="rest-note" hidden></p>
+
+      <!-- MOOD -->
+      <article class="card checkin-card" id="card-mood">
+        <div class="checkin-head">
+          <h3>💛 Mood</h3>
+          <span class="done-badge" id="done-mood" hidden>Done today ✓</span>
+        </div>
+        <p class="q" id="q-mood">How are you feeling right now? There's no wrong answer.</p>
+        <p class="hint" id="hint-mood" hidden></p>
+        <div class="mood-row" role="radiogroup" aria-label="Mood, choose one face">
+          <button type="button" class="mood-btn" data-mood="1" role="radio" aria-checked="false" aria-label="Rough day">
+            <span class="face" aria-hidden="true">😞</span><span class="mood-word">Rough</span>
+          </button>
+          <button type="button" class="mood-btn" data-mood="2" role="radio" aria-checked="false" aria-label="Feeling low">
+            <span class="face" aria-hidden="true">😕</span><span class="mood-word">Low</span>
+          </button>
+          <button type="button" class="mood-btn" data-mood="3" role="radio" aria-checked="false" aria-label="Feeling okay">
+            <span class="face" aria-hidden="true">😐</span><span class="mood-word">Okay</span>
+          </button>
+          <button type="button" class="mood-btn" data-mood="4" role="radio" aria-checked="false" aria-label="Feeling good">
+            <span class="face" aria-hidden="true">🙂</span><span class="mood-word">Good</span>
+          </button>
+          <button type="button" class="mood-btn" data-mood="5" role="radio" aria-checked="false" aria-label="Feeling great">
+            <span class="face" aria-hidden="true">😄</span><span class="mood-word">Great</span>
+          </button>
+        </div>
+      </article>
+
+      <!-- WATER -->
+      <article class="card checkin-card" id="card-water">
+        <div class="checkin-head">
+          <h3>💧 Water</h3>
+          <span class="done-badge" id="done-water" hidden>Done today ✓</span>
+        </div>
+        <p class="q" id="q-water">A glass of water is a small kindness to yourself.</p>
+        <p class="hint" id="hint-water" hidden></p>
+        <div class="water-row">
+          <div class="glasses" id="glasses-display" aria-hidden="true"></div>
+          <p class="water-count" aria-live="polite"><span id="water-count">0</span> of 8 glasses today</p>
+          <div class="water-actions">
+            <button type="button" class="btn btn-soft" id="water-minus" aria-label="Remove one glass of water">− Glass</button>
+            <button type="button" class="btn btn-primary" id="water-plus" aria-label="Add one glass of water">+ Glass</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- MOVEMENT -->
+      <article class="card checkin-card" id="card-movement">
+        <div class="checkin-head">
+          <h3>🚶 Movement</h3>
+          <span class="done-badge" id="done-movement" hidden>Done today ✓</span>
+        </div>
+        <p class="q" id="q-movement">A walk to the mailbox counts. So does dancing in the kitchen.</p>
+        <p class="hint" id="hint-movement" hidden></p>
+        <div class="choice-row" role="group" aria-label="How much did you move today?">
+          <button type="button" class="btn btn-choice" id="move-little" data-move="little">I moved a little 🌱</button>
+          <button type="button" class="btn btn-choice" id="move-lot" data-move="lot">I moved a lot 🌿</button>
+        </div>
+      </article>
+
+      <!-- SLEEP -->
+      <article class="card checkin-card" id="card-sleep">
+        <div class="checkin-head">
+          <h3>🌙 Sleep</h3>
+          <span class="done-badge" id="done-sleep" hidden>Done today ✓</span>
+        </div>
+        <p class="q" id="q-sleep">Roughly how long did you sleep last night? A guess is fine.</p>
+        <p class="hint" id="hint-sleep" hidden></p>
+        <label class="sleep-label" for="sleep-slider">Hours slept: <output id="sleep-output" for="sleep-slider">7.5</output></label>
+        <input type="range" id="sleep-slider" min="0" max="14" step="0.5" value="7.5" aria-describedby="sleep-output">
+        <div class="sleep-quick" role="group" aria-label="Quick sleep picks">
+          <button type="button" class="btn btn-chip" data-sleep="5">~5 hours</button>
+          <button type="button" class="btn btn-chip" data-sleep="7">~7 hours</button>
+          <button type="button" class="btn btn-chip" data-sleep="9">~9 hours</button>
+        </div>
+        <button type="button" class="btn btn-primary" id="sleep-save">Save sleep</button>
+      </article>
+
+      <p id="all-done-note" class="all-done" hidden>🎉 All four check-ins done — what a lovely day of care. Rootling is glowing.</p>
+    </section>
+
+    <!-- ============ WELLBEING (Worker 3): day plans, routines, worries, journal ============ -->
+
+    <section class="card" id="well-safety-bar" aria-labelledby="well-safety-heading">
+      <h3 id="well-safety-heading">Support now</h3>
+      <p class="q">What is this? Tap the button if things feel like too much right now. A short, calm page opens.</p>
+      <button type="button" class="btn btn-primary" id="well-safety-open">I need support now</button>
+    </section>
+
+    <section class="card" id="safety-view" aria-labelledby="safety-heading" hidden>
+      <h3 id="safety-heading">Support now</h3>
+      <p class="q">You are here. Take your time. Pick one thing.</p>
+      <p class="q" id="safety-disclaimer">I am an AI support tool and not a medical professional. If you are experiencing a crisis, contact emergency services, a healthcare provider, or a trusted person immediately.</p>
+      <p class="q">In the US, call or text <strong>988</strong> — the Suicide and Crisis Lifeline — any time, day or night.</p>
+
+      <div id="safety-checkin-panel">
+        <h4 id="safety-checkin-heading" tabindex="-1">A quick check-in first</h4>
+        <p class="q">I am concerned about your safety.</p>
+        <p class="q">Are you safe right now?</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="safety-checkin-safe">Yes, I'm Safe</button>
+          <button type="button" class="btn btn-soft" id="safety-checkin-help">I Need Help</button>
+        </div>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="safety-checkin-support">Contact Support</button>
+          <a class="btn btn-soft" id="safety-checkin-call911" href="tel:911">Call Emergency Services</a>
+        </div>
+        <p class="q" id="safety-support-line" hidden>Support: Support contact details will appear here once they are set up.</p>
+        <p class="fineprint" id="safety-checkin-status" role="status" aria-live="polite"></p>
+      </div>
+
+      <div id="safety-resources-panel" hidden>
+        <h4>Help right now</h4>
+        <p class="q">In the US, call or text <strong>988</strong> — the Suicide and Crisis Lifeline — any time, day or night.</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="safety-res-grounding-btn">Go to grounding tools</button>
+          <button type="button" class="btn btn-soft" id="safety-res-breathing-btn">Go to paced breathing</button>
+        </div>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="safety-checkin-contact-btn">Contact My Emergency Contact</button>
+        </div>
+      </div>
+
+      <div class="choice-row">
+        <button type="button" class="btn btn-primary" id="safety-grounding-btn">Go to grounding tools</button>
+        <button type="button" class="btn btn-soft" id="safety-breathing-btn">Go to paced breathing</button>
+      </div>
+      <p class="fineprint" id="safety-status" role="status" aria-live="polite"></p>
+
+      <div id="safety-alert-warning-panel" hidden>
+        <h4 id="safety-alert-warning-heading" tabindex="-1">Before anyone is contacted</h4>
+        <p class="q" id="safety-alert-warning-feature"></p>
+        <p class="q" id="safety-alert-warning-who"></p>
+        <p class="q">The note says, word for word:</p>
+        <p class="q" id="safety-alert-warning-preview"></p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="safety-alert-warning-go">Contact My Emergency Contact</button>
+          <button type="button" class="btn btn-soft" id="safety-alert-warning-notyet">Not Yet</button>
+          <button type="button" class="btn btn-soft" id="safety-alert-warning-resources">Show Crisis Resources</button>
+        </div>
+      </div>
+
+      <div id="safety-alert-timer-panel" hidden>
+        <h4 id="safety-alert-timer-heading" tabindex="-1">A short wait, so you can stop this</h4>
+        <p class="grounding-text" id="safety-alert-seconds">30</p>
+        <p class="q">I am preparing to contact your emergency contact.</p>
+        <p class="q">A notification will be sent in 30 seconds unless cancelled.</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="safety-alert-timer-cancel">Cancel Alert</button>
+          <button type="button" class="btn btn-soft" id="safety-alert-timer-safe">I Am Safe</button>
+          <button type="button" class="btn btn-soft" id="safety-alert-timer-sendnow">Send Now</button>
+        </div>
+      </div>
+
+      <div id="safety-alert-final-panel" hidden>
+        <h4 id="safety-alert-final-heading" tabindex="-1">One last check</h4>
+        <p class="q">I am about to notify your emergency contact.</p>
+        <p class="q">Do you want me to continue?</p>
+        <p class="q" id="safety-alert-final-preview"></p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="safety-alert-final-send">Send Alert</button>
+          <button type="button" class="btn btn-soft" id="safety-alert-final-cancel">Cancel Alert</button>
+        </div>
+      </div>
+      <p class="q" id="safety-alert-handoff-line" hidden></p>
+      <p class="fineprint" id="safety-alert-status" role="status" aria-live="polite"></p>
+
+      <h4>Share where you are</h4>
+      <p class="q">Location sharing should help you feel safer, never watched. Rootling asks first, each time.</p>
+      <div class="choice-row">
+        <button type="button" class="btn btn-soft" id="safety-loc-share-btn">Share my location</button>
+      </div>
+
+      <div id="safety-loc-consent-panel" hidden>
+        <h4 id="safety-loc-consent-heading" tabindex="-1">Would you like to allow location sharing during emergency situations?</h4>
+        <p class="q">Who sees it: only the contact you pick.</p>
+        <p class="q">When: only when you share it.</p>
+        <p class="q">How long: the time you pick.</p>
+        <p class="q">How to stop: turn the Location sharing switch off, or tap Stop.</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="safety-loc-enable">Enable Location Sharing</button>
+          <button type="button" class="btn btn-soft" id="safety-loc-notnow">Not Now</button>
+        </div>
+      </div>
+
+      <div id="safety-loc-ask-panel" hidden>
+        <h4 id="safety-loc-ask-heading" tabindex="-1">Share your location?</h4>
+        <p class="q">Would you like to share your location with your emergency contact?</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="safety-loc-ask-yes">Share Location</button>
+          <button type="button" class="btn btn-soft" id="safety-loc-ask-no">Not Now</button>
+        </div>
+      </div>
+
+      <div id="safety-loc-summary-panel" hidden>
+        <h4 id="safety-loc-summary-heading" tabindex="-1">Check before you share</h4>
+        <p class="q" id="safety-loc-summary-who"></p>
+        <p class="q" id="safety-loc-summary-method"></p>
+        <p class="q">Location is only as exact as your phone reports. It can be a few streets off.</p>
+        <p class="q">New location notes go out only while Rootling is open.</p>
+        <p class="q">How long will you share?</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-choice" id="safety-loc-dur-once" aria-pressed="false">Share Once</button>
+          <button type="button" class="btn btn-choice" id="safety-loc-dur-15" aria-pressed="false">15 Minutes</button>
+        </div>
+        <div class="choice-row">
+          <button type="button" class="btn btn-choice" id="safety-loc-dur-60" aria-pressed="false">1 Hour</button>
+          <button type="button" class="btn btn-choice" id="safety-loc-dur-until" aria-pressed="false">Until I Stop It</button>
+        </div>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="safety-loc-final-btn">Share my location now</button>
+          <button type="button" class="btn btn-soft" id="safety-loc-noloc-btn" hidden>Send the note without location</button>
+        </div>
+      </div>
+      <p class="q" id="safety-loc-handoff-line" hidden></p>
+      <p class="fineprint" id="safety-loc-status" role="status" aria-live="polite"></p>
+
+      <div id="safety-loc-indicator" hidden>
+        <p class="q" id="safety-loc-indicator-text"></p>
+        <button type="button" class="btn btn-soft" id="safety-loc-stop-btn">Stop</button>
+      </div>
+
+      <h4>People you trust</h4>
+      <p class="q">What is this? Add a person you trust. Then you can call or text them with one tap.</p>
+      <p class="q">Rootling never calls or texts anyone for you. These buttons are here so you can reach someone fast.</p>
+      <label for="safety-contact-name">Name of the person</label>
+      <input id="safety-contact-name" class="voice-target" type="text" maxlength="40" autocomplete="off" placeholder="A name">
+      <label for="safety-contact-relationship">How you know them (you can leave this blank)</label>
+      <input id="safety-contact-relationship" class="voice-target" type="text" maxlength="40" autocomplete="off" placeholder="Like: sister, friend, neighbour">
+      <label for="safety-contact-phone">Phone number</label>
+      <input id="safety-contact-phone" class="voice-target" type="tel" maxlength="24" autocomplete="off" placeholder="A phone number">
+      <label for="safety-contact-email">Email address (you can leave this blank)</label>
+      <input id="safety-contact-email" class="voice-target" type="email" maxlength="60" autocomplete="off" placeholder="An email address">
+      <label for="safety-contact-method">Best way to reach them</label>
+      <select id="safety-contact-method">
+        <option value="text" selected>Text</option>
+        <option value="email">Email</option>
+        <option value="call">Call</option>
+        <option value="push" disabled>Push — comes with the connected version — not available yet</option>
+      </select>
+      <label for="safety-contact-notify"><input id="safety-contact-notify" type="checkbox" checked> Alerts can go to this person</label>
+      <button type="button" class="btn btn-primary" id="safety-contact-add">Add this person</button>
+      <p class="fineprint" id="safety-contact-status" role="status" aria-live="polite"></p>
+      <ul id="safety-contact-list" class="learned-list"></ul>
+
+      <h4>Emergency contact dashboard</h4>
+      <p class="q">What is this? You choose if alerts are on, who gets them, and the exact words of the note. Nothing goes out unless you tap each step yourself.</p>
+      <label for="safety-alerts-enabled"><input id="safety-alerts-enabled" type="checkbox"> Emergency alerts</label>
+      <label for="safety-alerts-consent"><input id="safety-alerts-consent" type="checkbox"> I choose to turn this on. I have told my contact about it.</label>
+      <label for="safety-user-name">Your name (for emergency messages)</label>
+      <input id="safety-user-name" class="voice-target" type="text" maxlength="40" autocomplete="off" placeholder="Your name">
+      <p class="q" id="safety-alert-contact-line">No emergency contact picked yet.</p>
+      <p class="q">Your alert note, word for word:</p>
+      <p class="q" id="safety-alert-preview"></p>
+      <div class="choice-row">
+        <button type="button" class="btn btn-soft" id="safety-alert-start-btn">Contact My Emergency Contact</button>
+      </div>
+      <p class="fineprint" id="safety-alert-dash-status" role="status" aria-live="polite"></p>
+
+      <h4>Location sharing dashboard</h4>
+      <p class="q">Location sharing is off unless you turn it on. It is never asked for when you first meet Rootling.</p>
+      <label for="safety-loc-switch"><input id="safety-loc-switch" type="checkbox"> Location sharing</label>
+      <p class="fineprint" id="safety-loc-dash-status" role="status" aria-live="polite"></p>
+      <h4>Sharing history</h4>
+      <p class="q">This list says when you shared, who with, and for how long. It never keeps the place itself.</p>
+      <ul id="safety-loc-history-list" class="learned-list"></ul>
+      <button type="button" class="btn btn-ghost" id="safety-loc-history-delete">Delete history</button>
+      <div id="safety-loc-history-confirm" hidden>
+        <p class="q">Delete the whole sharing history? This cannot be undone.</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="safety-loc-history-delete-yes">Yes, delete history</button>
+          <button type="button" class="btn btn-soft" id="safety-loc-history-delete-no">Keep history</button>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-soft" id="safety-back-btn">Back</button>
+    </section>
+
+    <section class="card" id="well-dayplan-card" aria-labelledby="well-dayplan-heading">
+      <h3 id="well-dayplan-heading">Your day plan</h3>
+      <p class="q">What is this? Pick the plan that fits today. You can change it at any time.</p>
+      <p class="q">A Low Day is a plan you picked. It is not a bad day. Rest is a good end to a Low Day.</p>
+      <div class="choice-row">
+        <button type="button" class="btn btn-choice" id="well-plan-regular">Use Regular Day</button>
+        <button type="button" class="btn btn-choice" id="well-plan-low">Use Low Day</button>
+      </div>
+      <p class="fineprint" id="well-dayplan-status" role="status" aria-live="polite"></p>
+      <h4>Your Low Day list</h4>
+      <p class="q">What is this? On a Low Day, these few things are the whole day. Doing them is a full day.</p>
+      <ul id="well-floor-list" class="learned-list"></ul>
+      <label for="well-floor-input">Add one thing to your Low Day list</label>
+      <input id="well-floor-input" class="voice-target" type="text" maxlength="80" autocomplete="off" placeholder="One small thing">
+      <button type="button" class="btn btn-soft" id="well-floor-add">Add to Low Day list</button>
+      <h4>Now, Next, Later</h4>
+      <p class="q">What is this? Now is the one thing for now. Next is the thing after it. Later is the rest of today.</p>
+      <p class="q">Now</p>
+      <ul id="well-now-list" class="learned-list"></ul>
+      <p class="q">Next</p>
+      <ul id="well-next-list" class="learned-list"></ul>
+      <p class="q">Later</p>
+      <ul id="well-later-list" class="learned-list"></ul>
+    </section>
+
+    <section class="card" id="well-routines-card" aria-labelledby="well-routines-heading">
+      <h3 id="well-routines-heading">Routines</h3>
+      <p class="q">What is this? A routine is a list of steps, in order. Rootling shows you one step at a time.</p>
+      <h4>Make a new routine</h4>
+      <label for="well-routine-name">Name of the routine</label>
+      <input id="well-routine-name" class="voice-target" type="text" maxlength="40" autocomplete="off" placeholder="Name, like Morning or Night">
+      <label for="well-step-text">One step</label>
+      <input id="well-step-text" class="voice-target" type="text" maxlength="120" autocomplete="off" placeholder="One step, in plain words">
+      <label for="well-step-low">Low Day words for this step (you can leave this blank)</label>
+      <input id="well-step-low" class="voice-target" type="text" maxlength="120" autocomplete="off" placeholder="The same step, but smaller">
+      <button type="button" class="btn btn-soft" id="well-step-add">Add this step</button>
+      <ul id="well-draft-steps" class="learned-list"></ul>
+      <button type="button" class="btn btn-primary" id="well-routine-save">Save routine</button>
+      <p class="fineprint" id="well-routine-status" role="status" aria-live="polite"></p>
+      <h4>Your routines</h4>
+      <p class="q">Tap Start to use a routine. Tap Delete routine to take it off the list. Delete cannot be undone, so tap it only if you are sure.</p>
+      <ul id="well-routine-list" class="learned-list"></ul>
+      <div id="well-run-panel" hidden>
+        <h4 id="well-run-title">Routine</h4>
+        <p class="q" id="well-run-count"></p>
+        <p class="grounding-text" id="well-run-step"></p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="well-run-back">Back</button>
+          <button type="button" class="btn btn-primary" id="well-run-done">Done — next step</button>
+        </div>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="well-run-repeat">See that step again</button>
+          <button type="button" class="btn btn-ghost" id="well-run-stop">Stop for now</button>
+        </div>
+        <p class="fineprint" id="well-run-status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="card" id="well-feelings-card" aria-labelledby="well-feelings-heading">
+      <h3 id="well-feelings-heading">Name the feeling</h3>
+      <p class="q">What is this? Tap words that fit how you feel. You can tap one, many, or none.</p>
+      <p class="q" id="well-feelings-prompt" data-well-prompt>Naming a feeling can make it a little smaller. Pick any that fit — or none.</p>
+      <div class="choice-row" id="well-feelings-grid">
+        <button type="button" class="btn btn-chip" data-feeling="happy" aria-pressed="false">Happy</button>
+        <button type="button" class="btn btn-chip" data-feeling="calm" aria-pressed="false">Calm</button>
+        <button type="button" class="btn btn-chip" data-feeling="tired" aria-pressed="false">Tired</button>
+        <button type="button" class="btn btn-chip" data-feeling="sad" aria-pressed="false">Sad</button>
+        <button type="button" class="btn btn-chip" data-feeling="angry" aria-pressed="false">Angry</button>
+        <button type="button" class="btn btn-chip" data-feeling="worried" aria-pressed="false">Worried</button>
+        <button type="button" class="btn btn-chip" data-feeling="overwhelmed" aria-pressed="false">Overwhelmed</button>
+        <button type="button" class="btn btn-chip" data-feeling="numb" aria-pressed="false">Numb</button>
+        <button type="button" class="btn btn-chip" data-feeling="hopeful" aria-pressed="false">Hopeful</button>
+        <button type="button" class="btn btn-chip" data-feeling="frustrated" aria-pressed="false">Frustrated</button>
+        <button type="button" class="btn btn-chip" data-feeling="lonely" aria-pressed="false">Lonely</button>
+        <button type="button" class="btn btn-chip" data-feeling="proud" aria-pressed="false">Proud</button>
+      </div>
+      <button type="button" class="btn btn-soft" id="well-feelings-save">Save these words to my journal</button>
+      <p class="fineprint" id="well-feelings-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="card" id="well-worry-card" aria-labelledby="well-worry-heading">
+      <h3 id="well-worry-heading">Park a worry</h3>
+      <p class="q">What is this? Write a worry down. Rootling keeps it here. You do not have to hold it in your head.</p>
+      <label for="well-worry-input">Your worry, in your own words</label>
+      <input id="well-worry-input" class="voice-target" type="text" maxlength="200" autocomplete="off" placeholder="One worry">
+      <button type="button" class="btn btn-primary" id="well-worry-park">Park this worry</button>
+      <p class="fineprint" id="well-worry-status" role="status" aria-live="polite"></p>
+      <p class="q" id="well-worry-count">No worries parked.</p>
+      <label for="well-worry-time">Worry Time (a time to look at your worries — you can leave this blank)</label>
+      <input id="well-worry-time" type="time">
+      <div class="choice-row">
+        <button type="button" class="btn btn-soft" id="well-worry-time-save">Save Worry Time</button>
+        <button type="button" class="btn btn-ghost" id="well-worry-time-clear">Clear Worry Time</button>
+      </div>
+      <button type="button" class="btn btn-soft" id="well-worry-look">Look at my parked worries now</button>
+      <p class="q" id="well-worry-breaker" hidden>Re-checking can make worries feel bigger. It's parked safely — it will keep until Worry Time.</p>
+      <div id="well-worry-list" hidden></div>
+    </section>
+
+    <section class="card" id="well-journal-card" aria-labelledby="well-journal-heading">
+      <h3 id="well-journal-heading">Journal</h3>
+      <p class="q">What is this? Write a few words about your day. Only you can read this. It stays on this device.</p>
+      <p class="q" id="well-journal-prompt" data-well-prompt>You can write about your day, or leave this blank. Both are fine.</p>
+      <label for="well-journal-input">Your words</label>
+      <textarea id="well-journal-input" class="voice-target" rows="3" maxlength="1000" placeholder="Your words here"></textarea>
+      <button type="button" class="btn btn-primary" id="well-journal-save">Save journal entry</button>
+      <p class="fineprint">Tap Delete under an entry to take it off the list. Right after, you can tap Undo to put it back.</p>
+      <p class="fineprint" id="well-journal-status" role="status" aria-live="polite"></p>
+      <button type="button" class="btn btn-soft" id="well-journal-undo" hidden>Undo delete</button>
+      <ul id="well-journal-list" class="learned-list"></ul>
+    </section>
+
+    <section class="card" id="well-unsent-card" aria-labelledby="well-unsent-heading">
+      <h3 id="well-unsent-heading">Write it unsent</h3>
+      <p class="q">What is this? Write a letter you will not send. Get the words out. Rootling never sends it.</p>
+      <label for="well-unsent-input">Your letter</label>
+      <textarea id="well-unsent-input" class="voice-target" rows="3" maxlength="1000" placeholder="Words you do not need to send"></textarea>
+      <button type="button" class="btn btn-primary" id="well-unsent-save">Park this letter</button>
+      <p class="fineprint">Tap Delete under a letter to take it off the list. Right after, you can tap Undo to put it back. If a letter is ready, you can mark it. You send it yourself, if you choose. Rootling never sends it.</p>
+      <p class="fineprint" id="well-unsent-status" role="status" aria-live="polite"></p>
+      <button type="button" class="btn btn-soft" id="well-unsent-undo" hidden>Undo delete</button>
+      <ul id="well-unsent-list" class="learned-list"></ul>
+    </section>
+
+    <section class="card" id="well-sensory-card" aria-labelledby="well-sensory-heading">
+      <h3 id="well-sensory-heading">How things feel around you</h3>
+      <p class="q">What is this? A short note about sound, light, and your body right now. Some call this a sensory check-in. There are no right words.</p>
+      <button type="button" class="btn btn-soft" id="well-sensory-open">Open this check-in</button>
+      <div id="well-sensory-panel" hidden>
+        <p class="q">Tap the words that fit right now. You can tap one, many, or none.</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-chip" data-sensory="Too loud" aria-pressed="false">Too loud</button>
+          <button type="button" class="btn btn-chip" data-sensory="Too bright" aria-pressed="false">Too bright</button>
+          <button type="button" class="btn btn-chip" data-sensory="Just right" aria-pressed="false">Just right</button>
+          <button type="button" class="btn btn-chip" data-sensory="Need quiet" aria-pressed="false">Need quiet</button>
+          <button type="button" class="btn btn-chip" data-sensory="Need movement" aria-pressed="false">Need movement</button>
+          <button type="button" class="btn btn-chip" data-sensory="Too still" aria-pressed="false">Too still</button>
+        </div>
+        <label for="well-sensory-note">A note, if you want one (you can leave this blank)</label>
+        <input id="well-sensory-note" class="voice-target" type="text" maxlength="200" autocomplete="off" placeholder="A short note">
+        <button type="button" class="btn btn-primary" id="well-sensory-save">Save how it feels now</button>
+        <p class="fineprint" id="well-sensory-status" role="status" aria-live="polite"></p>
+        <ul id="well-sensory-list" class="learned-list"></ul>
+      </div>
+    </section>
+
+    <section class="card" id="well-mute-card" aria-labelledby="well-mute-heading">
+      <h3 id="well-mute-heading">Words to not show</h3>
+      <p class="q">What is this? Add a word you do not want to see. Short notes in these cards with that word will not show.</p>
+      <p class="q">Your own words always show. Help words and the 988 line always show. This list stays on this device.</p>
+      <label for="well-mute-input">One word to not show</label>
+      <input id="well-mute-input" class="voice-target" type="text" maxlength="40" autocomplete="off" placeholder="One word">
+      <button type="button" class="btn btn-soft" id="well-mute-add">Add this word</button>
+      <p class="fineprint" id="well-mute-status" role="status" aria-live="polite"></p>
+      <ul id="well-mute-list" class="learned-list"></ul>
+    </section>
+
+    <!-- ============ SOCIAL COACH (Social worker): scripts, guided practice, cue cards, message worksheet, word helpers, notebook ============ -->
+    <section class="card" id="social-view" aria-labelledby="social-heading">
+      <h3 id="social-heading">Social Coach</h3>
+      <p class="q">Practise words for real life. There are no wrong answers here.</p>
+      <p class="q">The goal is not to change who you are. It is to help you understand people, and say what you mean, as yourself.</p>
+      <p class="fineprint">Everything here stays on this device. Rootling never sends a message for you.</p>
+
+      <h4>Words you can use</h4>
+      <p class="q">Tap a time in life. Words for that time will show.</p>
+      <div id="soc-scripts-list"></div>
+      <div id="soc-script-card"></div>
+      <p class="fineprint" id="soc-scripts-status" role="status" aria-live="polite"></p>
+
+      <h4>Guided practice</h4>
+      <p class="q" id="soc-practice-label">Guided practice. Your pet reads the other part from a script. It is not a real chat.</p>
+      <div id="soc-practice-list"></div>
+      <div id="soc-practice-panel" hidden>
+        <p class="q" id="soc-practice-progress"></p>
+        <p class="q" id="soc-practice-speaker"></p>
+        <p class="q" id="soc-practice-line"></p>
+        <div id="soc-practice-choices"></div>
+        <p class="q" id="soc-practice-reply" hidden></p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-primary" id="soc-practice-next" hidden>Next part</button>
+          <button type="button" class="btn btn-soft" id="soc-practice-again" hidden>Practise again</button>
+          <button type="button" class="btn btn-ghost" id="soc-practice-pick" hidden>Pick a different practice</button>
+        </div>
+        <div id="soc-practice-feedback" hidden></div>
+      </div>
+      <p class="fineprint" id="soc-practice-status" role="status" aria-live="polite"></p>
+
+      <h4>Things you might notice</h4>
+      <p class="q">Tap one thing. You will see what it could mean.</p>
+      <p class="q">One sign can mean more than one thing. Only the person knows for sure.</p>
+      <div id="soc-cues-list"></div>
+      <div id="soc-cue-card"></div>
+
+      <h4>Think about a message</h4>
+      <p class="q" id="soc-ws-fixed">Only the person who sent it knows for sure what they meant. This page helps you think of possibilities.</p>
+      <label for="soc-ws-input">Paste or write the message here</label>
+      <textarea id="soc-ws-input" class="voice-target" rows="3" maxlength="1000" placeholder="The message you got"></textarea>
+      <button type="button" class="btn btn-primary" id="soc-ws-start">Start thinking about it</button>
+      <div id="soc-ws-panel" hidden>
+        <p class="q" id="soc-ws-progress"></p>
+        <div id="soc-ws-stage"></div>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="soc-ws-back">Back</button>
+          <button type="button" class="btn btn-primary" id="soc-ws-next">Next</button>
+        </div>
+        <button type="button" class="btn btn-soft" id="soc-ws-save" hidden>Save this to my notebook</button>
+      </div>
+      <p class="fineprint" id="soc-ws-status" role="status" aria-live="polite"></p>
+      <ul id="soc-ws-saved-list" class="learned-list"></ul>
+
+      <h4>Help me say it</h4>
+      <p class="q">Pick a kind of words. Fill in the gaps with your own words.</p>
+      <p class="q">Rootling never sends anything. These words are yours to use if you want.</p>
+      <div id="soc-tpl-list"></div>
+      <div id="soc-tpl-form"></div>
+      <label for="soc-tpl-result">My words</label>
+      <textarea id="soc-tpl-result" class="voice-target" rows="3" maxlength="1000" placeholder="Your words will show here"></textarea>
+      <div class="choice-row">
+        <button type="button" class="btn btn-primary" id="soc-tpl-build">Show my words</button>
+        <button type="button" class="btn btn-soft" id="soc-tpl-copy">Copy my words</button>
+      </div>
+      <p class="fineprint" id="soc-tpl-status" role="status" aria-live="polite"></p>
+
+      <h4>My notebook</h4>
+      <p class="q">Write what took place. There is no judging here.</p>
+      <label for="soc-ref-happened">What happened</label>
+      <textarea id="soc-ref-happened" class="voice-target" rows="2" maxlength="1000" placeholder="What took place"></textarea>
+      <label for="soc-ref-confusing">What felt confusing</label>
+      <textarea id="soc-ref-confusing" class="voice-target" rows="2" maxlength="1000" placeholder="The part that felt hard to read"></textarea>
+      <label for="soc-ref-well">What went well</label>
+      <textarea id="soc-ref-well" class="voice-target" rows="2" maxlength="1000" placeholder="One good part, big or small"></textarea>
+      <label for="soc-ref-next">What I might do next</label>
+      <textarea id="soc-ref-next" class="voice-target" rows="2" maxlength="1000" placeholder="One small next step, if any"></textarea>
+      <button type="button" class="btn btn-primary" id="soc-ref-save">Save to my notebook</button>
+      <p class="fineprint" id="soc-ref-status" role="status" aria-live="polite"></p>
+      <ul id="soc-ref-list" class="learned-list"></ul>
+
+      <h4>Brave moments</h4>
+      <p class="q">A brave moment can be small. Sending one message counts.</p>
+      <label for="soc-brave-input">Something brave I did</label>
+      <input id="soc-brave-input" class="voice-target" type="text" maxlength="200" autocomplete="off" placeholder="One brave thing">
+      <button type="button" class="btn btn-primary" id="soc-brave-add">Add my brave moment</button>
+      <p class="q" id="soc-brave-pet" role="status" aria-live="polite"></p>
+      <p class="fineprint" id="soc-brave-status" role="status" aria-live="polite"></p>
+      <ul id="soc-brave-list" class="learned-list"></ul>
+    </section>
+
+    <!-- ============ DIGITAL WELLNESS (Digital Wellness worker): time with Rootling, break reminders, activity library, nourished picture, challenges, aims, sticker shelf, grown-ups mirror ============ -->
+    <section class="card" id="time-view" aria-labelledby="time-heading">
+      <h3 id="time-heading">Time with Rootling and breaks</h3>
+      <p class="q">What is this? This page shows your time with Rootling, and gives you calm break ideas.</p>
+      <p class="q">Rootling can only count time while Rootling is open. This page never counts time on other apps.</p>
+      <p class="q">Technology should improve life, not replace it. Breaks are a good part of a day.</p>
+
+      <div id="time-reminder-card" hidden>
+        <p class="q" id="time-reminder-text" role="status" aria-live="polite"></p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-primary" id="time-reminder-break">Take a Break</button>
+          <button type="button" class="btn btn-soft" id="time-reminder-continue" hidden>Continue Working</button>
+          <button type="button" class="btn btn-soft" id="time-reminder-later">Remind Me Later</button>
+          <button type="button" class="btn btn-ghost" id="time-reminder-dismiss">Dismiss</button>
+        </div>
+      </div>
+
+      <h4>Today</h4>
+      <p class="q" id="time-today"></p>
+      <p class="q" id="time-today-warm"></p>
+      <p class="q" id="time-today-breaks"></p>
+
+      <h4>This week</h4>
+      <ul id="time-week-list" class="learned-list"></ul>
+      <div id="time-week-blocks" class="sleep-quick" aria-label="Days this week with time in Rootling"></div>
+
+      <h4>This month</h4>
+      <p class="q" id="time-month"></p>
+
+      <h4>Break reminders</h4>
+      <p class="q">Reminders ask. They never force. There is no sound and nothing flashes.</p>
+      <label class="check-row" for="time-reminder-toggle">
+        <input type="checkbox" id="time-reminder-toggle" checked>
+        <span>Break reminders on. You can turn them off with one tap, any time.</span>
+      </label>
+      <p class="q">How often should Rootling ask?</p>
+      <div class="sleep-quick" role="group" aria-label="How often Rootling asks about a break">
+        <button type="button" class="btn btn-chip" data-time-interval="30">Every 30 minutes</button>
+        <button type="button" class="btn btn-chip" data-time-interval="60">Every 1 hour</button>
+        <button type="button" class="btn btn-chip" data-time-interval="120">Every 2 hours</button>
+      </div>
+      <p class="fineprint" id="time-reminder-status" role="status" aria-live="polite"></p>
+
+      <h4>A break idea</h4>
+      <p class="q">How is your energy right now?</p>
+      <div class="sleep-quick" role="group" aria-label="How is your energy right now?" id="time-energy-group">
+        <button type="button" class="btn btn-chip" data-time-energy="high">Lots of energy</button>
+        <button type="button" class="btn btn-chip" data-time-energy="medium">In the middle</button>
+        <button type="button" class="btn btn-chip" data-time-energy="low">Low energy</button>
+      </div>
+      <button type="button" class="btn btn-ghost" id="time-hard-link">Things feel hard right now</button>
+      <div id="time-suggest-card" hidden>
+        <p class="q" id="time-suggest-category"></p>
+        <p class="q"><strong id="time-suggest-name"></strong></p>
+        <ul id="time-suggest-steps" class="learned-list"></ul>
+        <button type="button" class="btn btn-soft" id="time-suggest-grounding" hidden>Open the calm tools</button>
+        <div class="choice-row">
+          <button type="button" class="btn btn-primary" id="time-suggest-done">I did this</button>
+          <button type="button" class="btn btn-soft" id="time-suggest-another">Another idea</button>
+        </div>
+      </div>
+      <p class="fineprint" id="time-suggest-status" role="status" aria-live="polite"></p>
+
+      <div id="time-low-panel" hidden>
+        <h4>Small steps for hard days</h4>
+        <p class="q">Pick one small thing. One is enough.</p>
+        <div id="time-low-list"></div>
+        <p class="q" id="time-low-status" role="status" aria-live="polite"></p>
+      </div>
+
+      <h4>Today you nourished</h4>
+      <div id="time-nourished" class="sleep-quick">
+        <div class="btn-chip time-nourish-seg" data-nourish="movement">Movement</div>
+        <div class="btn-chip time-nourish-seg" data-nourish="water">Water</div>
+        <div class="btn-chip time-nourish-seg" data-nourish="rest">Rest</div>
+        <div class="btn-chip time-nourish-seg" data-nourish="learning">Learning</div>
+        <div class="btn-chip time-nourish-seg" data-nourish="people">People</div>
+        <div class="btn-chip time-nourish-seg" data-nourish="outside">Outside</div>
+      </div>
+      <p class="q">This picture only grows. Nothing here goes down.</p>
+      <p class="q">A new day starts empty. Empty is fine.</p>
+
+      <div id="time-celebrate" hidden>
+        <img id="time-celebrate-img" class="pet-img" src="assets/sprout-celebrate.svg" alt="Your Rootling companion cheering" width="120" height="120">
+        <p class="q" id="time-celebrate-text" role="status" aria-live="polite"></p>
+      </div>
+
+      <h4>Sticker shelf</h4>
+      <p class="q">Stickers you earn stay on this shelf. They never go away.</p>
+      <div id="time-sticker-shelf" class="sleep-quick"></div>
+      <p class="q" id="time-sticker-empty">No stickers yet. Your first break or challenge will add one.</p>
+      <p class="q" id="time-participation-line"></p>
+
+      <h4>Pick an activity</h4>
+      <p class="q">Tap the big button. Rootling shows one activity at a time.</p>
+      <button type="button" class="btn btn-primary" id="time-pick-btn">🎲 Pick an Activity</button>
+      <p class="q">How should Rootling pick?</p>
+      <div class="sleep-quick" role="group" aria-label="How Rootling picks an activity">
+        <button type="button" class="btn btn-chip" data-time-pick-mode="any">Random from Any Category</button>
+        <button type="button" class="btn btn-chip" data-time-pick-mode="category">Specific Category Only</button>
+        <button type="button" class="btn btn-chip" data-time-pick-mode="surprise">Surprise Me</button>
+      </div>
+      <div id="time-pick-cat-row" hidden>
+        <p class="q">Pick one kind:</p>
+        <div class="sleep-quick" role="group" aria-label="Pick one kind of activity">
+          <button type="button" class="btn btn-chip" data-time-pick-cat="Mental Wellness">Mental Wellness</button>
+          <button type="button" class="btn btn-chip" data-time-pick-cat="Physical">Physical</button>
+          <button type="button" class="btn btn-chip" data-time-pick-cat="Nature">Nature</button>
+          <button type="button" class="btn btn-chip" data-time-pick-cat="Learning">Learning</button>
+          <button type="button" class="btn btn-chip" data-time-pick-cat="Creative">Creative</button>
+          <button type="button" class="btn btn-chip" data-time-pick-cat="Social">Social</button>
+          <button type="button" class="btn btn-chip" data-time-pick-cat="Productivity">Productivity</button>
+          <button type="button" class="btn btn-chip" data-time-pick-cat="Self-Care">Self-Care</button>
+          <button type="button" class="btn btn-chip" data-time-pick-cat="low">Low Energy Activities</button>
+        </div>
+      </div>
+      <label for="time-context-input">Tell Rootling about today</label>
+      <input id="time-context-input" type="text" maxlength="120" autocomplete="off" placeholder="raining / staying in / hot out">
+      <button type="button" class="btn btn-soft" id="time-context-save">Save today's note</button>
+      <p class="fineprint" id="time-context-status" role="status" aria-live="polite"></p>
+      <div id="time-picker-card" hidden>
+        <p class="q" id="time-picker-category"></p>
+        <p class="q"><strong id="time-picker-name"></strong></p>
+        <p class="q" id="time-picker-desc"></p>
+        <p class="q" id="time-picker-time"></p>
+        <p class="q" id="time-picker-benefits"></p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-primary" id="time-picker-start">Start</button>
+          <button type="button" class="btn btn-soft" id="time-picker-fav">Favorite</button>
+          <button type="button" class="btn btn-soft" id="time-picker-another">Pick Another</button>
+        </div>
+        <button type="button" class="btn btn-ghost" id="time-picker-notforme">Not for me</button>
+        <div id="time-picker-started" hidden>
+          <ul id="time-picker-steps" class="learned-list"></ul>
+          <button type="button" class="btn btn-primary" id="time-picker-done">Done</button>
+        </div>
+      </div>
+      <div id="time-complete-panel" hidden>
+        <p class="q">Did you complete this activity?</p>
+        <p class="q">Any attempt counts as success. The goal is participation, not perfection.</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-primary" data-time-complete="yes">Yes</button>
+          <button type="button" class="btn btn-soft" data-time-complete="partly">Partially</button>
+          <button type="button" class="btn btn-soft" data-time-complete="not-this-time">Not This Time</button>
+        </div>
+      </div>
+      <p class="fineprint" id="time-picker-status" role="status" aria-live="polite"></p>
+      <h4>My favourites</h4>
+      <ul id="time-favorites-list" class="learned-list"></ul>
+
+      <h4>Real-world challenges</h4>
+      <p class="q">These are offers, not jobs. Pick one only if you want to.</p>
+      <p class="q">Pick a time, if you like:</p>
+      <div class="sleep-quick" role="group" aria-label="Pick a challenge time">
+        <button type="button" class="btn btn-chip" data-time-chal-duration="5 minutes">5 minutes</button>
+        <button type="button" class="btn btn-chip" data-time-chal-duration="15 minutes">15 minutes</button>
+        <button type="button" class="btn btn-chip" data-time-chal-duration="30 minutes">30 minutes</button>
+      </div>
+      <p class="q">Pick a size, in your own words:</p>
+      <div class="sleep-quick" role="group" aria-label="Pick a challenge size">
+        <button type="button" class="btn btn-chip" data-time-chal-diff="gentle">Gentle</button>
+        <button type="button" class="btn btn-chip" data-time-chal-diff="middle">In the middle</button>
+        <button type="button" class="btn btn-chip" data-time-chal-diff="stretch">A stretch</button>
+      </div>
+      <div id="time-challenges"></div>
+      <h4>Your challenges</h4>
+      <ul id="time-challenge-active" class="learned-list"></ul>
+      <p class="fineprint" id="time-challenge-status" role="status" aria-live="polite"></p>
+
+      <h4>My aims</h4>
+      <p class="q">Pick any aims you like. You can pick more than one, or none.</p>
+      <div class="sleep-quick" role="group" aria-label="My aims">
+        <button type="button" class="btn btn-chip" data-time-goal="less">Use screens less</button>
+        <button type="button" class="btn btn-chip" data-time-goal="move">Move more</button>
+        <button type="button" class="btn btn-chip" data-time-goal="read">Read more</button>
+        <button type="button" class="btn btn-chip" data-time-goal="people">More time with people</button>
+        <button type="button" class="btn btn-chip" data-time-goal="sleep">Sleep better</button>
+      </div>
+      <ul id="time-goal-lines" class="learned-list"></ul>
+
+      <h4>For grown-ups helping</h4>
+      <div id="time-grownups">
+        <p class="q">A grown-up using this phone or tablet can see this same page. Nothing here is hidden, and nothing extra is shown to them.</p>
+        <p class="q">There is no other page for grown-ups. This panel shows the same reminder settings and the same aims as above.</p>
+        <label class="check-row" for="time-grown-reminder-toggle">
+          <input type="checkbox" id="time-grown-reminder-toggle" checked>
+          <span>Break reminders on. You can turn them off with one tap, any time.</span>
+        </label>
+        <div class="sleep-quick" role="group" aria-label="How often Rootling asks about a break, grown-ups">
+          <button type="button" class="btn btn-chip" data-time-grown-interval="30">Every 30 minutes</button>
+          <button type="button" class="btn btn-chip" data-time-grown-interval="60">Every 1 hour</button>
+          <button type="button" class="btn btn-chip" data-time-grown-interval="120">Every 2 hours</button>
+        </div>
+        <ul id="time-grown-goal-lines" class="learned-list"></ul>
+      </div>
+    </section>
+
+    <!-- Settings: everything changeable, any time -->
+    <section class="card" aria-labelledby="settings-heading">
+      <h3 id="settings-heading">How should your pet support you?</h3>
+      <p class="q" id="profile-tagline"></p>
+      <p class="fineprint">Change one choice at a time, any time. Nothing here resets on its own, nothing is recorded about why you changed it, and you never have to explain a change.</p>
+      <fieldset class="settings-group">
+        <legend>Support style</legend>
+        <label for="profile-select">Support style</label>
+        <select id="profile-select" aria-describedby="profile-tagline">
+          <option value="companion">Just a companion</option>
+          <option value="focus">Focus &amp; momentum (ADHD-friendly)</option>
+          <option value="calm">Calm &amp; predictable (autism-friendly)</option>
+          <option value="grounding">Grounding &amp; safety (PTSD-friendly)</option>
+          <option value="lowdemand">Low-demand days (anxiety/depression-friendly)</option>
+          <option value="adaptive">Let my companion learn</option>
+        </select>
+      </fieldset>
+      <fieldset class="settings-group">
+        <legend>Learning</legend>
+        <label class="check-row" for="learn-checkbox">
+          <input type="checkbox" id="learn-checkbox" aria-describedby="learn-disabled-note">
+          <span>Let my companion learn from my usage (this device only) and adjust its style</span>
+        </label>
+        <p class="fineprint" id="learn-disabled-note" hidden>This style learns by design — switch styles to turn learning off.</p>
+      </fieldset>
+      <fieldset class="settings-group" id="support-toggles">
+        <legend>Your own mix</legend>
+        <p class="q">What is this? Four small choices. Each one works on its own. Pick one. It works at once. The rest stay as they were.</p>
+        <label for="support-celebration">Cheering style</label>
+        <select id="support-celebration">
+          <option value="">Use my style pick</option>
+          <option value="full">Full — big cheer</option>
+          <option value="quiet">Quiet — words only</option>
+          <option value="none">None — no cheer</option>
+        </select>
+        <label for="support-prompt-variety">Words for check-ins</label>
+        <select id="support-prompt-variety">
+          <option value="">Use my style pick</option>
+          <option value="fixed">Same words each day</option>
+          <option value="varied">New words each day</option>
+        </select>
+        <label for="support-pet-energy">Pet energy</label>
+        <select id="support-pet-energy">
+          <option value="">Use my style pick</option>
+          <option value="lively">Lively — lots of moving</option>
+          <option value="gentle">Gentle — a little moving</option>
+          <option value="still">Still — no moving</option>
+        </select>
+        <label for="support-reminder-intensity">Reminders</label>
+        <select id="support-reminder-intensity">
+          <option value="gentle">Gentle — fewer reminder plans show</option>
+          <option value="standard">Standard — all reminder plans show</option>
+        </select>
+        <p class="fineprint">Learning has its own switch above. It never moves these four choices. Only you do.</p>
+        <p class="fineprint" id="support-status" role="status" aria-live="polite"></p>
+      </fieldset>
+    </section>
+
+    <!-- Settings split into short named cards at integration (USABILITY-MAP fix) -->
+    <section class="card" aria-labelledby="settings-companion-heading">
+      <h3 id="settings-companion-heading">Your companion's shape and senses</h3>
+      <fieldset class="settings-group" id="personality-fieldset">
+        <legend>How your pet talks</legend>
+        <p class="q">Pick one way for your pet to talk. You can change it any time. Your own picks above still win after you pick.</p>
+        <label for="personality-select">Pet way of talking</label>
+        <select id="personality-select">
+          <option value="Friendly">Friendly</option>
+          <option value="Cheerful">Cheerful</option>
+          <option value="Calm">Calm</option>
+          <option value="Professional">Professional</option>
+          <option value="Motivational">Motivational</option>
+          <option value="Playful">Playful</option>
+        </select>
+        <p class="fineprint">This changes how your pet talks. It never changes what your pet promises.</p>
+        <p class="fineprint" id="personality-status" role="status" aria-live="polite"></p>
+      </fieldset>
+      <fieldset class="settings-group">
+        <legend>Sensory</legend>
+        <label class="check-row" for="calm-checkbox">
+          <input type="checkbox" id="calm-checkbox">
+          <span>Low-sensory calm mode — no bouncing or swaying, softer colours</span>
+        </label>
+        <p class="fineprint">Rootling has no sound, and nothing in Rootling flashes or plays on its own.</p>
+        <label for="pause-screen-select">When I tap Pause, show me</label>
+        <select id="pause-screen-select">
+          <option value="blank">A blank page</option>
+          <option value="companion">My companion, asleep</option>
+          <option value="colour">A plain colour</option>
+        </select>
+      </fieldset>
+    </section>
+
+    <section class="card" aria-labelledby="settings-words-heading">
+      <h3 id="settings-words-heading">Words, colours and motion</h3>
+      <fieldset class="settings-group" id="appearance-fieldset">
+        <legend>Words, colours and motion</legend>
+        <p class="q">Pick how Rootling looks and moves. Tap a choice. It changes at once. You can change it back any time.</p>
+        <label for="appearance-theme">Colours</label>
+        <select id="appearance-theme">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="contrast">High contrast (black, white and yellow)</option>
+        </select>
+        <label for="appearance-text-size">Word size</label>
+        <select id="appearance-text-size">
+          <option value="standard">Standard</option>
+          <option value="large">Large</option>
+          <option value="xlarge">Extra large</option>
+        </select>
+        <label for="appearance-font">Letter shapes</label>
+        <select id="appearance-font">
+          <option value="standard">Usual letters</option>
+          <option value="reading">Easy to read letters</option>
+        </select>
+        <label class="check-row" for="appearance-calm-motion">
+          <input type="checkbox" id="appearance-calm-motion">
+          <span>Calm motion — stop all moving and fading</span>
+        </label>
+        <label for="appearance-density">Space between things</label>
+        <select id="appearance-density">
+          <option value="comfortable">Comfortable (more space)</option>
+          <option value="compact">Compact (less space)</option>
+        </select>
+        <p class="fineprint" id="appearance-status" role="status" aria-live="polite">Your picks are saved on this device.</p>
+      </fieldset>
+      <p class="q">Companion form (your name, sunshine and history stay exactly the same):</p>
+      <div class="choice-row">
+        <button type="button" class="btn btn-choice" data-form-switch="plant">🌱 Plant</button>
+        <button type="button" class="btn btn-choice" data-form-switch="animal">🐾 Animal</button>
+      </div>
+      <button type="button" class="btn btn-soft" id="learned-toggle">What your companion has learned</button>
+      <button type="button" class="btn btn-soft" id="privacy-toggle">Privacy &amp; your data</button>
+    </section>
+
+    <section class="card" id="learned-view" aria-labelledby="learned-heading" hidden>
+      <h3 id="learned-heading">What your companion has learned</h3>
+      <p class="q">Everything below lives only on this device. Your companion adjusts its support <em>style</em> — it never diagnoses you and never gives you a label you didn't choose.</p>
+      <p class="q">Your chosen support style always comes first — learning only fills in where your style is silent, and every adjustment is listed here as it happens. Turning learning off in settings stops anything new being learned; what is already here stays until you forget it below.</p>
+      <button type="button" class="btn btn-soft" id="learned-see-all-btn">See everything</button>
+      <ul id="learned-list" class="learned-list" hidden></ul>
+      <h4>Your pet's memory</h4>
+      <p class="q" id="memory-stats">Memory details load with this view.</p>
+      <p class="fineprint">Rootling asks your browser to keep its storage persistent the first time it runs, and nothing your pet remembers is ever deleted automatically. A browser can still clear site data — if you clear it, or under heavy storage pressure — so the backup below is the copy you control. It is also how your pet's memory moves with you if Rootling later becomes an app-store app: same file, restored, nothing starts over.</p>
+      <div class="choice-row">
+        <button type="button" class="btn btn-soft" id="export-memory-btn">Download my pet's memory</button>
+        <label class="btn btn-soft" for="import-memory-input">Import a memory backup</label>
+        <input type="file" id="import-memory-input" accept="application/json,.json" hidden>
+      </div>
+      <p class="fineprint" id="memory-status" role="status"></p>
+      <button type="button" class="btn btn-ghost" id="prune-learning-btn">Forget day-by-day pattern details (keep my totals)</button>
+      <button type="button" class="btn btn-ghost" id="reset-learning-btn">Forget everything learned</button>
+    </section>
+
+    <!-- Memory Book (Memory & Personalization worker): keepsakes, your
+         memories, gentle notes, and about-you words. It shows real
+         things only, and only when memory is on. It lives on this
+         device only. -->
+    <section class="card" id="memory-book" aria-labelledby="memory-book-heading">
+      <h3 id="memory-book-heading">Memory Book</h3>
+      <p class="q">The purpose of memory is to provide better support, not surveillance.</p>
+      <p class="q">This book keeps your good moments and the things your pet remembers. You can see each one. You can change each one. You can delete each one.</p>
+      <p class="q">'Right now' memories fade after 30 days unless you keep them. 'Kept for later' memories stay until you delete them.</p>
+      <div id="memory-off-panel">
+        <p class="q">Your pet's memory is off. When you turn memory on, this book will keep your keepsakes and the things your pet remembers, where you can see them.</p>
+        <button type="button" class="btn btn-soft" id="memory-how-btn">How memory works</button>
+      </div>
+      <div id="memory-on-panel" hidden>
+        <p class="fineprint" id="memory-book-status" role="status" aria-live="polite"></p>
+
+        <h4>Your memories</h4>
+        <p class="q">Each line says what it is, why it is here, and when it last changed.</p>
+        <h5>Right now</h5>
+        <ul id="memory-now-list" class="learned-list"></ul>
+        <p class="q" id="memory-now-empty">Nothing here right now.</p>
+        <h5>Kept for later</h5>
+        <ul id="memory-kept-list" class="learned-list"></ul>
+        <p class="q" id="memory-kept-empty">Nothing kept for later yet.</p>
+        <h5>Your pet noticed these</h5>
+        <p class="q">Your pet noticed these. While memory is on, they are kept here where you can see them. You can Forget any of them any time. Tap Keep to file one with your kept memories.</p>
+        <ul id="memory-noticed-list" class="learned-list"></ul>
+        <p class="q" id="memory-noticed-empty">Nothing here yet.</p>
+        <div id="memory-tidy-wrap" hidden>
+          <h5>You could tidy these</h5>
+          <p class="q">These have not changed in a long time. Keep them, or forget them. It is your tap, always.</p>
+          <ul id="memory-tidy-list" class="learned-list"></ul>
+        </div>
+
+        <h4>Things your pet noticed</h4>
+        <ul id="memory-obs-list" class="learned-list"></ul>
+        <p class="q" id="memory-obs-empty">Nothing here yet. As you use Rootling, gentle notes like these may appear — only when your book backs them up.</p>
+        <p class="q">Your pet only says these when your own book backs them up.</p>
+
+        <h4>Keepsakes</h4>
+        <p class="q">Good moments, kept safe. Rootling never takes a keepsake away. Only you can delete one.</p>
+        <ul id="memory-keepsakes-list" class="learned-list"></ul>
+        <p class="q" id="memory-keepsakes-empty">No keepsakes yet. Your first ones will show here.</p>
+        <label for="memory-keepsake-input">Add a good moment</label>
+        <input id="memory-keepsake-input" class="voice-target" type="text" maxlength="200" autocomplete="off" placeholder="One good moment, in your words">
+        <label for="memory-keepsake-note">A line from your journal you want to keep (you can leave this blank)</label>
+        <textarea id="memory-keepsake-note" class="voice-target" rows="2" maxlength="500" placeholder="Your words here"></textarea>
+        <button type="button" class="btn btn-primary" id="memory-keepsake-add">Save this good moment</button>
+
+        <h4>About you</h4>
+        <p class="q">Words you choose to share. You do not have to fill any of this in.</p>
+        <ul id="memory-about-list" class="learned-list"></ul>
+        <label for="memory-about-name-input">The name you like to be called</label>
+        <input id="memory-about-name-input" class="voice-target" type="text" maxlength="60" autocomplete="off" placeholder="The name you like">
+        <button type="button" class="btn btn-soft" id="memory-about-name-add">Save this name</button>
+        <label for="memory-about-pronouns-input">Your pronouns (you can leave this blank)</label>
+        <input id="memory-about-pronouns-input" class="voice-target" type="text" maxlength="60" autocomplete="off" placeholder="Your words">
+        <button type="button" class="btn btn-soft" id="memory-about-pronouns-add">Save pronouns</button>
+        <label for="memory-about-interest-input">A thing you like doing</label>
+        <input id="memory-about-interest-input" class="voice-target" type="text" maxlength="120" autocomplete="off" placeholder="One thing you like doing">
+        <button type="button" class="btn btn-soft" id="memory-about-interest-add">Add this thing</button>
+        <label for="memory-about-reward-input">What cheers you up</label>
+        <input id="memory-about-reward-input" class="voice-target" type="text" maxlength="120" autocomplete="off" placeholder="One thing that cheers you up">
+        <button type="button" class="btn btn-soft" id="memory-about-reward-add">Add this</button>
+        <p class="fineprint" id="memory-about-status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- Privacy view (Worker 4): dashboard first, then the full policy in
+         plain words. Inserted before #changes-view as briefed; the consent
+         module moves this section out of #main-view when it is opened from
+         the adoption screen, so the policy is reachable before adoption. -->
+    <section class="card" id="privacy-view" aria-labelledby="privacy-heading" hidden>
+      <button type="button" class="btn btn-ghost" id="privacy-close-btn">Back</button>
+
+      <div id="privacy-dashboard">
+        <h3 id="privacy-heading">Privacy &amp; your data</h3>
+        <p class="q">This page shows what Rootling keeps, and gives you the switches to download it or delete it.</p>
+        <p class="q" id="privacy-reminders-status">Reminders: off.</p>
+        <p class="q" id="privacy-memory-status">Pet memory (learning): off.</p>
+        <p class="q" id="privacy-storage-summary">What Rootling keeps on this device will be listed here.</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="privacy-download-btn">Download my data</button>
+          <a class="btn btn-soft" href="#privacy-policy-heading">Read the Privacy Policy</a>
+        </div>
+        <div id="privacy-area-deletes"></div>
+        <p class="q">Rootling has no account and no password. There is nothing to sign in to, and your information stays on this device.</p>
+        <p class="q">Support: Support contact details will appear here once they are set up.</p>
+        <button type="button" class="btn btn-ghost" id="delete-my-data-btn">Delete my data</button>
+        <div id="delete-confirm" hidden>
+          <p class="q">This deletes your pet, check-ins, and everything Rootling keeps on this device. It cannot be undone. Your downloaded backup file, if you made one, is yours to keep or delete.</p>
+          <div class="choice-row">
+            <button type="button" class="btn btn-soft" id="delete-confirm-btn">Yes, delete my data</button>
+            <button type="button" class="btn btn-soft" id="delete-cancel-btn">Keep my data</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="privacy-policy">
+        <h3 id="privacy-policy-heading">Privacy Policy, in plain words</h3>
+        <p>Last updated: October 15, 2026. This page is the whole policy. There is no longer version hidden somewhere else.</p>
+
+        <h4>What Rootling keeps</h4>
+        <p>Rootling keeps things on this device only. It keeps:</p>
+        <ul>
+          <li>Your pet, its name, and how much it has grown.</li>
+          <li>Your check-ins (your mood, water, movement, and sleep notes).</li>
+          <li>Your settings — the choices you make for how the app looks and acts.</li>
+          <li>Things your pet learns about how you use the app, but only if you turn learning on.</li>
+          <li>Anything you write in the app, such as lists or journal words (a journal is a place where you write your own notes).</li>
+        </ul>
+        <p>Some memories in your Memory Book are marked "Right now". After 30 days, Rootling points at them and asks if you want to keep them for later. Nothing is deleted unless you tap Forget.</p>
+        <p>These things are kept in your browser's storage, on this device. A browser is the app you use to open web pages, like Chrome or Safari.</p>
+
+        <h4>Why Rootling keeps it</h4>
+        <p>So your pet can be your companion. That is the only reason. Your pet needs its name, your check-ins, and your choices so it can greet you and keep growing with you.</p>
+
+        <h4>What Rootling never does</h4>
+        <ul>
+          <li>Rootling never sells your information.</li>
+          <li>Rootling never uses your information for advertising (ads).</li>
+          <li>Rootling never shares your information with anyone, unless you say it may.</li>
+          <li>Rootling has no hidden tracking. Tracking means secretly watching what you do. Rootling does not do that.</li>
+          <li>Rootling has no account. You never sign in.</li>
+          <li>As Rootling works today, the app sends nothing from this device to anyone. Your pet, check-ins, and learning stay here, on this device.</li>
+        </ul>
+
+        <h4>Your choices</h4>
+        <ul>
+          <li><strong>Learning on or off:</strong> in the adoption form, and later in Settings under "Learning". The first time you turn it on, Rootling asks once more, in plain words, so you can be sure.</li>
+          <li><strong>Reminders on or off:</strong> in the Alerts card on the main screen. Reminders are off until you turn them on.</li>
+          <li><strong>Download your data:</strong> tap "Download my data" at the top of this page, or "Download my pet's memory" in "What your companion has learned". You get one file that is yours to keep.</li>
+          <li><strong>Delete some of your data:</strong> buttons at the top of this page can delete one part at a time, when that part exists.</li>
+          <li><strong>Delete all of your data:</strong> tap "Delete my data" at the top of this page. It asks you to be sure first. Then it deletes everything Rootling keeps on this device.</li>
+          <li><strong>See what your pet learned:</strong> tap "What your companion has learned" in Settings. You can forget what it learned there, too.</li>
+        </ul>
+
+        <h4>How long things are kept</h4>
+        <p>Things are kept until you delete them. Rootling does not delete your pet or your check-ins on its own.</p>
+        <p>One thing is not in Rootling's control: your browser can clear site data. Site data means the things a web page stores on your device. If you clear it, or if your device runs very low on space, your browser may remove what Rootling keeps. That is why the backup file matters: the backup file is the copy you control. Keep it somewhere safe if you want a copy that no browser can take away.</p>
+
+        <h4>Safety note</h4>
+        <p>Rootling is a self-care companion. It is not a medical device, not therapy, and not a substitute for professional care. It does not diagnose or treat any condition. Diagnose means to name a health problem; Rootling never does that.</p>
+        <p>If things ever feel like too much, you deserve support from a person: in the US, call or text <strong>988</strong> — the Suicide and Crisis Lifeline — any time, day or night.</p>
+
+        <h4>Who Rootling is for</h4>
+        <p>Rootling is made for adults and older teens. If you are under 18, please use it with a parent or guardian who knows you are using it. A guardian is an adult who cares for you and is in charge of your safety.</p>
+
+        <h4>FUTURE: What changes if Rootling adds accounts later</h4>
+        <p>This part is about a possible future. It is not true today.</p>
+        <ul>
+          <li>If accounts are ever added, they would be optional. Optional means you could say no and keep using Rootling as it is now.</li>
+          <li>This policy would be updated first, and shown to you before any sign-up, so you could read it and choose.</li>
+          <li>The things Rootling keeps on this device today would stay on this device, unless you choose to move them.</li>
+        </ul>
+      </div>
+
+      <!-- Memory consent gate (Worker 4): shown the first time learning is
+           about to be turned on. The module moves this panel out of the
+           privacy view on first run so it can appear over any screen.
+           Neither button is first, marked, or focused: the heading takes
+           focus so a screen reader starts at the words, not at a choice. -->
+      <section id="memory-gate" aria-labelledby="memory-gate-heading" hidden>
+        <h4 id="memory-gate-heading" tabindex="-1">Before your pet starts remembering</h4>
+        <p>The AI can remember details you choose to share in order to provide better support. You remain in control and can view or delete memories at any time.</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-soft" id="memory-gate-enable">Enable Memory</button>
+          <button type="button" class="btn btn-soft" id="memory-gate-notnow">Not Now</button>
+        </div>
+      </section>
+    </section>
+
+    <section class="card" id="changes-view" aria-labelledby="changes-heading">
+      <h3 id="changes-heading">What has changed in Rootling</h3>
+      <p class="q">If anything about how Rootling looks or works ever changes, it will be written here first, in plain words: what will change, when it will change, and what will stay the same.</p>
+      <ul class="changes-list">
+        <li>Your settings are never reset by an update.</li>
+        <li>Seasonal pictures or new features are never added without being listed here first.</li>
+      </ul>
+    </section>
+
+    <footer class="app-footer">
+      <p>Your Rootling never judges. Missed a day? That's a rest day — companions rest too. 🌿</p>
+      <div class="support-box">
+        <p><strong>Rootling is a self-care companion — not a medical device, not therapy, and not a substitute for professional care.</strong> It does not diagnose or treat any condition.</p>
+        <p>If things ever feel like too much, you deserve support from a person: in the US, call or text <strong>988</strong> — the Suicide and Crisis Lifeline — any time, day or night. Veterans can press 1 after dialing 988.</p>
+        <p>If sleep problems keep going, a professional can help — CBT-I is the recommended treatment for ongoing insomnia. Rootling does not provide it.</p>
+        <p>Privacy, in plain language: your pet, check-ins, and anything it learns live on your device and are never sent anywhere. Optional connected helpers (alerts, email) are off by default, are labeled where they appear, and each one tells you exactly what it touches before you turn it on.</p>
+      </div>
+      <button type="button" class="btn btn-ghost" id="privacy-footer-btn">Privacy &amp; your data</button>
+      <button type="button" class="btn btn-ghost" id="reset-btn">Start over with a new companion</button>
+    </footer>
+  </div>
+</main>
+
+<!-- Pause / leave quietly: one tap, no confirmation, nothing recorded (research §118) -->
+<section id="quiet-view" hidden aria-labelledby="quiet-heading">
+  <h2 id="quiet-heading" class="sr-only">Paused</h2>
+  <img id="quiet-art" class="pet-img" src="assets/sprout-sleepy.svg" alt="" width="160" height="160" hidden>
+  <div id="quiet-colour" hidden></div>
+  <p class="quiet-text">You paused Rootling. Nothing changed. You can come back whenever, or not at all.</p>
+  <button type="button" class="btn btn-primary" id="quiet-resume-btn">Back to Rootling</button>
+</section>
+
+<script src="app.js"></script>
+<script src="notifications.js"></script>
+</body>
+</html>

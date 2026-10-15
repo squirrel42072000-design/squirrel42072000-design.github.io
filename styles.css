@@ -1,0 +1,319 @@
+/* Sprout — warm wellness palette, mobile-first, system fonts only (offline). */
+:root{
+  --cream:#fdf8ef;
+  --paper:#fffdf8;
+  --leaf:#2e7d5b;
+  --leaf-dark:#1f5c41;
+  --leaf-soft:#dcefe2;
+  --sage:#7fb069;
+  --sun:#f4b942;
+  --sun-soft:#fdeed3;
+  --peach:#f6c9a0;
+  --ink:#2f3a33;
+  --ink-soft:#5c6b60;
+  --line:#e6ddc9;
+  --radius:18px;
+  --shadow:0 4px 18px rgba(46,90,64,.10);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:linear-gradient(180deg,var(--sun-soft) 0,var(--cream) 220px,var(--cream) 100%);
+  color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  line-height:1.5;
+  min-height:100vh;
+}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+main{max-width:560px;margin:0 auto;padding:0 16px 40px}
+
+/* Header */
+.app-header{
+  max-width:560px;margin:0 auto;padding:18px 16px 6px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{font-size:2.125rem;line-height:1}
+.app-header h1{margin:0;font-size:1.625rem;color:var(--leaf-dark);letter-spacing:.2px}
+.tagline{margin:0;font-size:0.7812rem;color:var(--ink-soft)}
+.sunshine-badge{
+  background:var(--paper);border:1.5px solid var(--sun);color:#8a5a00;
+  border-radius:999px;padding:6px 14px;font-weight:700;font-size:1rem;box-shadow:var(--shadow);
+  white-space:nowrap;
+}
+
+/* Cards */
+.card{
+  background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:20px;margin-top:16px;
+}
+.gentle{color:var(--ink-soft)}
+.gentle.small{font-size:0.875rem;margin:4px 2px 0}
+.fineprint{font-size:0.7812rem;color:var(--ink-soft);margin-top:14px}
+
+/* Buttons & inputs */
+.btn{
+  font:inherit;font-weight:600;border-radius:999px;border:1.5px solid transparent;
+  padding:11px 20px;cursor:pointer;min-height:48px;touch-action:manipulation;
+}
+:focus-visible{
+  outline:3px solid var(--leaf-dark);outline-offset:2px;
+}
+.btn-primary{background:var(--leaf);color:#fff}
+.btn-primary:active{background:var(--leaf-dark)}
+.btn-soft{background:var(--leaf-soft);color:var(--leaf-dark);border-color:var(--sage)}
+.btn-choice{background:var(--cream);border-color:var(--line);color:var(--ink);flex:1}
+.btn-choice.selected{background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf-dark)}
+.btn-chip{background:var(--cream);border-color:var(--line);color:var(--ink-soft);padding:8px 13px;min-height:44px;font-size:0.875rem}
+.btn-chip.selected{background:var(--sun-soft);border-color:var(--sun);color:#8a5a00}
+.btn-ghost{background:none;color:var(--ink-soft);border-color:var(--line);font-size:0.8438rem;min-height:44px;padding:8px 14px}
+input[type="text"]{
+  font:inherit;width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;
+  background:var(--paper);margin:6px 0 12px;min-height:50px;
+}
+label{font-weight:600}
+
+/* Adopt */
+.adopt-card{text-align:center}
+.adopt-card form{text-align:left;margin-top:14px}
+.adopt-card .btn{width:100%}
+.adopt-img{margin-top:4px}
+
+/* Pet */
+.pet-card{text-align:center}
+.pet-stage-wrap{
+  background:radial-gradient(circle at 50% 38%,#fff7df 0,#eef7ec 62%,#e2f0e0 100%);
+  border-radius:50%;width:216px;height:216px;margin:2px auto 8px;
+  display:flex;align-items:center;justify-content:center;
+}
+.pet-img{width:190px;height:190px;object-fit:contain}
+.pet-img.bounce{animation:bounce .6s ease}
+.pet-img.sway{animation:sway 3.2s ease-in-out infinite}
+@keyframes bounce{0%{transform:translateY(0)}35%{transform:translateY(-14px)}70%{transform:translateY(2px)}100%{transform:translateY(0)}}
+@keyframes sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+@media (prefers-reduced-motion:reduce){.pet-img.bounce,.pet-img.sway{animation:none}.progress-fill{transition:none}}
+.pet-card h2{margin:6px 0 2px;font-size:1.5rem;color:var(--leaf-dark)}
+.stage-label{display:block;font-size:0.8125rem;font-weight:600;color:var(--leaf-dark);letter-spacing:.4px;text-transform:uppercase;margin-top:2px}
+.pet-message{font-size:1.0312rem;margin:10px 6px 4px;min-height:1.5em}
+.growth{margin:14px auto 4px;max-width:420px;text-align:left}
+.growth-row{font-size:0.8438rem;color:var(--ink-soft);margin-bottom:5px}
+.progress{height:12px;background:var(--leaf-soft);border-radius:999px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--sage),var(--sun));border-radius:999px;transition:width .5s ease}
+.stats{display:flex;gap:10px;margin:16px 0 4px;padding:0}
+.stat{flex:1;background:var(--cream);border:1px solid var(--line);border-radius:14px;padding:10px 4px}
+.stat dt{font-size:0.75rem;color:var(--ink-soft);font-weight:600}
+.stat dd{margin:2px 0 0;font-size:1.25rem;font-weight:700;color:var(--leaf-dark)}
+.rest-note{background:var(--sun-soft);border:1px solid var(--peach);border-radius:12px;padding:10px 12px;font-size:0.9062rem;margin:12px 0 2px}
+
+/* Check-ins */
+.section-title{margin:26px 2px 0;font-size:1.25rem;color:var(--leaf-dark)}
+.checkin-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.checkin-card h3{margin:0;font-size:1.125rem}
+.checkin-card .q{color:var(--ink-soft);margin:6px 0 12px;font-size:0.9062rem}
+.done-badge{background:var(--leaf-soft);color:var(--leaf-dark);font-size:0.7812rem;font-weight:700;border-radius:999px;padding:4px 10px;white-space:nowrap}
+.checkin-card.done{border-color:var(--sage)}
+.mood-row{display:flex;gap:6px;justify-content:space-between}
+.mood-btn{
+  flex:1;background:var(--cream);border:1.5px solid var(--line);border-radius:14px;
+  padding:10px 2px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;
+  min-height:74px;font:inherit;
+}
+.mood-btn .face{font-size:1.75rem;line-height:1.15}
+.mood-btn .mood-word{font-size:0.7188rem;color:var(--ink-soft);font-weight:600}
+.mood-btn.selected{background:var(--sun-soft);border-color:var(--sun)}
+.water-row{text-align:center}
+.glasses{font-size:1.375rem;letter-spacing:3px;min-height:30px}
+.glasses .glass-empty{opacity:.28;filter:grayscale(1)}
+.water-count{margin:4px 0 10px;font-weight:600}
+.water-actions{display:flex;gap:10px;justify-content:center}
+.choice-row{display:flex;gap:10px}
+.sleep-label{display:block;margin-bottom:6px}
+.sleep-label output{font-weight:700;color:var(--leaf-dark)}
+input[type="range"]{width:100%;accent-color:var(--leaf);height:44px}
+.sleep-quick{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
+#sleep-save{width:100%}
+.all-done{background:var(--leaf-soft);border:1px solid var(--sage);color:var(--leaf-dark);border-radius:14px;padding:13px 14px;font-weight:600;text-align:center;margin-top:16px}
+.app-footer{text-align:center;margin-top:26px;color:var(--ink-soft);font-size:0.875rem}
+.app-footer p{margin:0 0 12px}
+
+@media (min-width:640px){
+  .pet-stage-wrap{width:248px;height:248px}
+  .pet-img{width:218px;height:218px}
+  .app-header h1{font-size:1.875rem}
+}
+
+/* ---- Phase 1/2 additions: picker, profiles, grounding, learned, calm ---- */
+select{
+  font:inherit;width:100%;padding:12px;border:1.5px solid var(--line);border-radius:12px;
+  background:var(--paper);margin:6px 0 12px;min-height:50px;color:var(--ink);
+}
+.picker{border:none;margin:0 0 8px;padding:0}
+.picker legend{font-weight:600;margin-bottom:8px}
+.picker-row{display:flex;gap:10px}
+.picker-btn{
+  flex:1;background:var(--cream);border:2px solid var(--line);border-radius:14px;cursor:pointer;
+  padding:12px 6px;font:inherit;font-weight:600;color:var(--ink);
+  display:flex;flex-direction:column;align-items:center;gap:6px;min-height:48px;
+}
+.picker-btn.selected{border-color:var(--leaf);background:var(--leaf-soft)}
+.picker-btn:focus-visible{outline:3px solid var(--leaf-dark);outline-offset:2px}
+.check-row{
+  display:flex;gap:10px;align-items:flex-start;font-weight:500;font-size:0.9062rem;
+  margin:8px 0 14px;cursor:pointer;text-align:left;
+}
+.check-row input{width:24px;height:24px;margin-top:2px;accent-color:var(--leaf);flex:none}
+.hint{
+  background:var(--sun-soft);border:1px solid var(--peach);border-radius:10px;
+  padding:8px 10px;font-size:0.8438rem;margin:0 0 10px;color:var(--ink);
+}
+.preview-list{list-style:none;margin:8px 0 0;padding:0;font-size:0.9375rem}
+.preview-list li{padding:5px 0;border-bottom:1px dashed var(--line)}
+.preview-list li:last-child{border-bottom:none}
+.grounding-text{font-size:1.0312rem;margin:14px 0;min-height:1.5em}
+.learned-list{margin:8px 0 14px;padding-left:20px;font-size:0.9062rem;color:var(--ink)}
+.learned-list li{margin:5px 0}
+.support-box{
+  background:var(--paper);border:1px solid var(--line);border-radius:14px;
+  padding:14px;text-align:left;font-size:0.8438rem;color:var(--ink-soft);margin:0 0 14px;
+}
+.support-box p{margin:0 0 8px}
+.support-box p:last-child{margin:0}
+#learned-toggle{width:100%;margin-top:12px}
+/* Calm mode (sensory control): no motion, muted palette. User-chosen, always reversible. */
+body.calm{--sun:#d9c9a0;--sun-soft:#efe9d8;--sage:#8aa88e;--leaf:#4a7a5f;--leaf-dark:#3c5f4c}
+body.calm .pet-img{animation:none !important}
+/* Pet-energy "still" (wellbeing toggle): the pet rests — no sway, no bounce. */
+body.well-still .pet-img,.well-still .pet-img{animation:none !important}
+body.calm .progress-fill{transition:none}
+body.calm *,body.calm *::before,body.calm *::after{animation:none !important;transition:none !important}
+/* Calm must also mute the hard-coded surfaces the variable palette cannot reach. */
+body.calm .pet-stage-wrap{background:radial-gradient(circle at 50% 38%,#f4f1e6 0,#edf2ea 62%,#e6eee3 100%)}
+body.calm .progress-fill{background:var(--leaf)}
+
+/* ---- Research-addition prototypes (UX & Sensory slice, 2026-10-15) ----
+   Functional today: quick-actions jump links (plain anchors, no JS needed).
+   Ready for Condition/app.js wiring: text-roomy density channel and the
+   Regular/Low day-switch segmented control (reuse .btn-choice.selected). */
+.quick-actions{display:flex;gap:10px;margin-top:16px}
+.quick-actions a{text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center}
+.settings-group{border:none;margin:0 0 6px;padding:0}
+.settings-group legend{font-weight:700;color:var(--leaf-dark);margin-bottom:4px;padding:0}
+body.text-roomy{line-height:1.75}
+body.text-roomy .card{padding:26px 22px}
+body.text-roomy .fineprint,body.text-roomy .support-box{font-size:0.9062rem}
+body.text-roomy .checkin-card .q,body.text-roomy .gentle.small{font-size:1rem}
+.day-switch{display:flex;gap:10px}
+.changes-list{margin:8px 0 0;padding-left:20px;font-size:0.9062rem;color:var(--ink)}
+
+/* Pause / quiet view (coordinator D1 fix, per UX spec) */
+#quiet-view{max-width:560px;margin:48px auto;padding:0 16px 40px;text-align:center}
+#quiet-view .pet-img{animation:none}
+#quiet-colour{height:140px;border-radius:14px;background:var(--leaf-soft);margin-bottom:16px}
+.quiet-text{font-size:1.0312rem;color:var(--ink);margin:0 0 18px}
+#pause-btn{flex:none}
+
+/* ---- Appearance: themes, word size, letter shapes, calm motion, space ----
+   Worker 1 (Accessibility and Appearance). All picks are the user's own,
+   saved on this device only, and never change on their own. The look stays
+   in the same place with the same words in every theme (safety through
+   sameness). */
+@font-face{
+  font-family:"Atkinson Hyperlegible";
+  src:url("assets/fonts/atkinson-regular.woff2") format("woff2");
+  font-weight:400;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:"Atkinson Hyperlegible";
+  src:url("assets/fonts/atkinson-bold.woff2") format("woff2");
+  font-weight:700;font-style:normal;font-display:swap;
+}
+
+/* Skip link: hidden until it is reached by keyboard, then plainly visible. */
+.skip-link{
+  position:absolute;left:8px;top:-80px;z-index:60;
+  background:var(--paper);color:var(--leaf-dark);
+  border:2px solid var(--leaf-dark);border-radius:999px;
+  padding:12px 20px;font-weight:700;text-decoration:none;
+}
+.skip-link:focus{top:8px}
+
+/* Word size: root steps. All word sizes in this sheet are in rem, so these
+   steps scale the words and leave the layout bones in place. */
+html[data-text-size="large"]{font-size:18px}
+html[data-text-size="xlarge"]{font-size:20px}
+/* At the biggest size, rows wrap instead of squeezing words off the edge. */
+html[data-text-size="xlarge"] .mood-row,
+html[data-text-size="xlarge"] .choice-row,
+html[data-text-size="xlarge"] .water-actions,
+html[data-text-size="xlarge"] .sleep-quick,
+html[data-text-size="xlarge"] .quick-actions,
+html[data-text-size="xlarge"] .stats{flex-wrap:wrap}
+html[data-text-size="xlarge"] .mood-btn{min-width:3.5rem}
+html[data-text-size="xlarge"] .stat{min-width:5.5rem}
+html[data-text-size="xlarge"] .btn,
+html[data-text-size="large"] .btn{overflow-wrap:break-word;height:auto}
+
+/* Easy to read letters: same-origin font when it loads, plain wide stack
+   behind it, plus a little more room between letters and words. */
+html[data-font="reading"] body{
+  font-family:"Atkinson Hyperlegible",Verdana,"Segoe UI",sans-serif;
+  letter-spacing:.02em;word-spacing:.06em;
+}
+
+/* Space between things: compact packs the same cards a little tighter.
+   Comfortable is the plain default above; nothing moves to a new place. */
+html[data-density="compact"] .card{padding:12px;margin-top:10px}
+html[data-density="compact"] main{padding-bottom:24px}
+html[data-density="compact"] .section-title{margin-top:18px}
+html[data-density="compact"] .pet-img{width:150px;height:150px}
+html[data-density="compact"] .pet-stage-wrap{width:172px;height:172px}
+
+/* Calm motion: one class on the page stops every move and fade, app-wide.
+   This sits next to the reduced-motion media rule above and does the same
+   job when the user picks it by hand. */
+html.calm-motion *,html.calm-motion *::before,html.calm-motion *::after{
+  animation:none !important;transition:none !important;
+}
+
+/* Dark theme: calm dark colours. Words on cards and on the page both stay
+   at strong contrast (body words are light on near-black green). */
+html[data-theme="dark"]{
+  --cream:#131916;--paper:#1d2620;--leaf:#2e7d5b;--leaf-dark:#a9dcbc;
+  --leaf-soft:#2a3d31;--sage:#5f8a6e;--sun:#f4b942;--sun-soft:#2c2c1c;
+  --peach:#7a5c3e;--ink:#f4f7f2;--ink-soft:#ccd8cc;--line:#44544a;
+  --shadow:0 4px 18px rgba(0,0,0,.45);
+}
+html[data-theme="dark"] .pet-stage-wrap{background:radial-gradient(circle at 50% 38%,#33453a 0,#26332b 62%,#1f2b23 100%)}
+html[data-theme="dark"] .sunshine-badge{color:var(--sun)}
+html[data-theme="dark"] .btn-chip.selected{color:var(--sun)}
+html[data-theme="dark"] body.calm .pet-stage-wrap{background:radial-gradient(circle at 50% 38%,#2c3830 0,#232d26 62%,#1e2721 100%)}
+
+/* High contrast theme: black, white and yellow only. Body words are black
+   on white (the strongest pair there is). */
+html[data-theme="contrast"]{
+  --cream:#ffffff;--paper:#ffffff;--leaf:#000000;--leaf-dark:#000000;
+  --leaf-soft:#ffff00;--sage:#000000;--sun:#ffff00;--sun-soft:#ffffcc;
+  --peach:#000000;--ink:#000000;--ink-soft:#1a1a1a;--line:#000000;
+  --shadow:none;
+}
+html[data-theme="contrast"] .pet-stage-wrap{background:#ffffff;border:2px solid #000000}
+html[data-theme="contrast"] .progress-fill{background:#000000}
+html[data-theme="contrast"] .sunshine-badge{color:#000000;border-color:#000000}
+html[data-theme="contrast"] .btn-chip.selected{color:#000000;border-color:#000000}
+html[data-theme="contrast"] .mood-btn.selected,
+html[data-theme="contrast"] .picker-btn.selected,
+html[data-theme="contrast"] .btn-choice.selected{border-color:#000000}
+html[data-theme="contrast"] .card{border-width:2px}
+html[data-theme="contrast"] :focus-visible{outline:4px solid #000000;outline-offset:2px}
+html[data-theme="dark"] :focus-visible{outline:3px solid var(--leaf-dark);outline-offset:2px}
+
+/* Listen and voice-typing controls (added by the appearance code only when
+   the browser can really do them; they are never shown as greyed teases). */
+.listen-row{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 4px}
+.voice-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.voice-note{
+  border:1.5px solid var(--line);background:var(--sun-soft);color:var(--ink);
+  border-radius:12px;padding:12px;margin-top:8px;font-size:0.9375rem;
+}
+.voice-note p{margin:0 0 10px}
