@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Sprout placeholder — a happy little potted sprout">
+  <!-- PLACEHOLDER built by Worker 3 (build) because assets/ was empty at build time.
+       The character worker's set (sprout-seed.svg, sprout-sprout.svg, sprout-bud.svg,
+       sprout-bloom.svg, sprout-happy.svg, sprout-sleepy.svg, sprout-low.svg,
+       sprout-celebrate.svg) drops into this folder with NO code changes:
+       app.js references those filenames and falls back to this file on error. -->
+  <circle cx="100" cy="100" r="96" fill="#eef7ec"/>
+  <!-- sun -->
+  <circle cx="158" cy="36" r="15" fill="#f4b942"/>
+  <g stroke="#f4b942" stroke-width="3" stroke-linecap="round">
+    <line x1="158" y1="12" x2="158" y2="18"/><line x1="158" y1="54" x2="158" y2="60"/>
+    <line x1="134" y1="36" x2="140" y2="36"/><line x1="176" y1="36" x2="182" y2="36"/>
+  </g>
+  <!-- stem -->
+  <path d="M100 138 C100 118 100 104 100 88" stroke="#2e7d5b" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <!-- leaves -->
+  <path d="M100 108 C82 112 68 102 66 84 C84 82 96 92 100 108z" fill="#7fb069"/>
+  <path d="M100 96 C114 100 128 92 130 76 C114 74 103 82 100 96z" fill="#a7c957"/>
+  <path d="M100 88 C100 72 108 62 122 58 C124 74 116 86 100 88z" fill="#2e7d5b" opacity="0.85"/>
+  <!-- face on the pot -->
+  <!-- pot -->
+  <path d="M66 138 h68 l-7 40 a8 8 0 0 1-8 7 H81 a8 8 0 0 1-8-7z" fill="#e07a5f"/>
+  <rect x="60" y="130" width="80" height="12" rx="6" fill="#c95f43"/>
+  <circle cx="86" cy="158" r="4" fill="#2f3a33"/>
+  <circle cx="114" cy="158" r="4" fill="#2f3a33"/>
+  <path d="M92 168 Q100 174 108 168" stroke="#2f3a33" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <circle cx="76" cy="166" r="5" fill="#f6c9a0" opacity="0.8"/>
+  <circle cx="124" cy="166" r="5" fill="#f6c9a0" opacity="0.8"/>
+  <!-- soil -->
+  <ellipse cx="100" cy="133" rx="30" ry="4" fill="#8a5a3b" opacity="0.55"/>
+</svg>

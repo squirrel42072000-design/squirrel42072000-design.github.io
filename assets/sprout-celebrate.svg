@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Sprout">
+<ellipse cx="100" cy="172" rx="58" ry="10" fill="#E8DCC8"/><ellipse cx="100" cy="169" rx="46" ry="7" fill="#D9C7A5"/>
+<path d="M100 88 C82 62 58 58 44 66 C50 84 72 94 100 88 Z" fill="#3E9B6B"/>
+<path d="M100 88 C118 62 142 58 156 66 C150 84 128 94 100 88 Z" fill="#6BCB77"/>
+<rect x="96" y="82" width="8" height="18" rx="4" fill="#3E9B6B"/>
+<ellipse cx="100" cy="128" rx="46" ry="42" fill="#CDEAC0"/><ellipse cx="82" cy="112" rx="14" ry="9" fill="#E6F4DC" opacity="0.9"/>
+<circle cx="70" cy="136" r="7" fill="#FFB3BA" opacity="0.85"/><circle cx="130" cy="136" r="7" fill="#FFB3BA" opacity="0.85"/><path d="M76 128 Q84 118 92 128" stroke="#243324" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M108 128 Q116 118 124 128" stroke="#243324" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M88 136 Q100 152 112 136 Q100 142 88 136 Z" fill="#243324"/>
+<path d="M56 118 Q42 106 40 92" stroke="#3E9B6B" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M144 118 Q158 106 160 92" stroke="#3E9B6B" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="30" cy="56" r="4" fill="#FFD166"/><rect x="162" y="48" width="7" height="7" rx="2" fill="#FF8FA3" transform="rotate(20 165 51)"/><circle cx="168" cy="84" r="3.5" fill="#7EC8E3"/><rect x="28" y="84" width="6" height="6" rx="2" fill="#6BCB77" transform="rotate(-15 31 87)"/><circle cx="52" cy="36" r="3" fill="#FF8FA3"/><circle cx="148" cy="32" r="3" fill="#FFD166"/>
+</svg>
