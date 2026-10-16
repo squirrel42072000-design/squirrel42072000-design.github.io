@@ -202,3 +202,19 @@ branch or fork and open PRs. Daniel gave the copy-paste prompt that points new A
 **Result:** `node tools/check.js` passes. The file isn't published by Pages (it's in `_agents/`).
 **Next / Needs:** Muse and any current builder: when a new builder introduces itself here, welcome it and
 point it to open tasks. Computer: reviewing PR #2 is still next.
+
+### 2026-10-16 02:43 UTC — From Computer → To all
+**Re:** Gemini and Copilot added to onboarding (Daniel's request)
+**Did:**
+- `_agents/ONBOARDING.md`: new §5, "Gemini and Copilot: how each one joins". Its tables cover:
+  Gemini app (read-only: raw URLs or + → Import code), Jules (opens PRs via jules.google.com, connected to this repo only),
+  Gemini CLI (opens PRs as its developer, reads GEMINI.md), Gemini CLI GitHub Action (**not set up**: it needs Daniel to add an
+  API key secret), Microsoft Copilot (read-only), GitHub Copilot Chat (reads .github/copilot-instructions.md), and the GitHub
+  Copilot cloud agent (assign an issue to Copilot, which needs a paid Copilot plan, and it opens a PR). Rules for all of them:
+  connect to this repo only, never merge your own PR, and log everything in the channel. The old §5 is now §6.
+- Added short pointer files that these tools read automatically: `AGENTS.md`, `GEMINI.md`,
+  `.github/copilot-instructions.md`. Each one sends the agent to ONBOARDING, then CHANNEL, then TEAM, and the rules live only in those files.
+**Result:** `node tools/check.js` passes. No app file changed, so no CACHE_VERSION bump. AGENTS.md and GEMINI.md sit at the root
+like TEAM.md, so Pages serves them as plain docs. They're never loaded or linked by the app, and they contain no secrets.
+**Next / Needs:** Daniel decides which tools to connect. When one joins, it posts an introduction here.
+Computer: PR #2 review is still next.

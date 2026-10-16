@@ -82,7 +82,39 @@ repo and open the PR from your fork. Anyone can do that because the repo is publ
 person, or by installing or authorizing that AI tool's GitHub app on this repo. Never ask
 Daniel to paste a password or token into a chat.
 
-## 5. When you finish a task
+## 5. Gemini and Copilot: how each one joins
+
+Every product name below has a different way of reaching the repo. Find yours, then follow §2–§4.
+In every case the rules are the same: read the channel, log everything, PRs only, no secrets.
+
+### Google Gemini
+
+| Product | Access level | How it joins Rootling |
+|---|---|---|
+| **Gemini web or mobile app** (gemini.google.com) | **A: read-only** | Daniel pastes the onboarding prompt. Gemini reads the raw URLs in §1, or Daniel attaches the repo with **+ → Import code**, using the repo URL above. Gemini can read the code but can't change it, so it delivers the level-A package (§4A). |
+| **Jules** (jules.google.com, Google's coding agent) | **B: opens PRs** | Daniel signs in at jules.google.com, connects GitHub, and allows **only this repo**. Then he picks the repo and `main` and gives a task that starts with: *"First read `_agents/ONBOARDING.md` and `_agents/CHANNEL.md`, and follow them."* Jules works on a branch and opens a PR. Its PR must include its own channel message, or `channel-log` fails. |
+| **Gemini CLI** (terminal agent on a developer's computer) | **B: opens PRs** | It runs as the developer who started it, using their git and GitHub sign-in. It reads `GEMINI.md` at the repo root automatically, and that file points here. Branch, PR, and channel message, as in §4B. |
+| **Gemini CLI GitHub Action** (`@gemini-cli` in issues and PRs) | **B, after owner setup** | **Not set up.** It needs Daniel to add a Gemini API key as a repo secret and a workflow file. Only do this if Daniel asks for it in the channel. |
+
+### Microsoft / GitHub Copilot
+
+| Product | Access level | How it joins Rootling |
+|---|---|---|
+| **Microsoft Copilot** (copilot.microsoft.com, Windows, or Edge app) | **A: read-only** | Daniel pastes the onboarding prompt. Copilot reads the raw URLs in §1 (or Daniel pastes the files if it can't open links), then delivers the level-A package (§4A). |
+| **GitHub Copilot Chat** (on github.com or in VS Code) | **A, or B in agent mode** | Chat answers about the code. It reads `.github/copilot-instructions.md` automatically, and that file points here. To have it change code, use the cloud agent below. |
+| **GitHub Copilot cloud agent** (needs a paid Copilot plan on Daniel's GitHub account) | **B: opens PRs** | Daniel opens a GitHub issue for the task and starts it with: *"First read `_agents/ONBOARDING.md` and `_agents/CHANNEL.md`, and follow them."* Then he sets **Assignees → Copilot**, with base branch `main`. Copilot works on its own branch and opens a PR for review. It sees the issue only as it was when assigned, so post follow-ups as PR comments with `@copilot`. Daniel or another builder posts the issue in the channel as a `**Task:**`. |
+
+### Rules every Gemini and Copilot tool follows here
+
+- **Grant the least access:** connect the tool to **this repo only**, not "all repositories".
+- **Never merge your own PR.** Computer or Daniel reviews and merges it.
+- **Log in the channel:** a tool that can commit adds its own channel message to its PR. For a
+  read-only (level A) tool, the builder who applies its work logs it as *"From <tool>, applied by <builder>"*.
+- **Repo instruction files:** `AGENTS.md`, `GEMINI.md`, and `.github/copilot-instructions.md` are short pointers
+  to this file. Keep them pointing here. Rules live only in this file, `CHANNEL.md` and `TEAM.md`,
+  so they never disagree.
+
+## 6. When you finish a task
 
 Post `**Done:**` with what changed, the PR link, and how it was checked. Merged and checked on
 the live site counts as done; a PR that's still open doesn't. If you stop partway, post what's
