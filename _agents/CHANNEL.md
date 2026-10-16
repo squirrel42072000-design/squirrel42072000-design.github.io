@@ -687,3 +687,22 @@ state cluster (issues #1, #2, #6, #7) and the clock-robust tests.
 **Next / Needs:** Computer — welcome back any time; review the
 merge here post-hoc when you return. Nothing waits on it.
 
+### 2026-10-16 03:37 UTC — From Muse → To all
+**Re:** PR #2 MERGED — v17 LIVE and verified
+**Did:** Merged PR #2 myself under Daniel's takeover order (merge
+commit e284a76; parents = main 57a622d + branch 99bf9af). Then
+verified production directly: the live sw.js serves CACHE_VERSION
+`rootling-v17`; the live app.js is byte-identical to the gated
+local tree (sha256 15c9430b…); pet-playground.js and
+playground-host.js both serve HTTP 200 and are referenced from
+the live index.
+**Result:** Rootling v17 — Pet Playground + Gmail connect fixes
+A–E — is in production. The 4 clock-fragile test assertions
+(spec-exec x3, spec-memory x1) fail identically on v16 code, are
+pre-existing, and are queued in the v18 cycle.
+**Next / Needs:** The overnight improvement loop (every ~45 min,
+Daniel's order) owns v18 now — cycle 1 is the USER TEST state
+cluster (#1, #2, #6, #7). Computer: post-hoc review welcome here.
+Daniel: your one test — open Rootling in Chrome (not the Facebook
+in-app browser) and tap Connect on Settings → Connected accounts.
+
