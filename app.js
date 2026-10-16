@@ -19,7 +19,7 @@
    * NOT exported — it is this device's own request state, not data. */
   var MODULE_STORE_KEYS = ['rootling-appearance-v1', 'rootling-exec-v1',
     'rootling-well-v1', 'rootling-consent-v1', 'rootling-social-v1',
-    'rootling-time-v1', 'rootling-memorybook-v1', 'rootling-assistant-v1', 'rootling-fitness-v1', 'rootling-mood-v1'];
+    'rootling-time-v1', 'rootling-memorybook-v1', 'rootling-assistant-v1', 'rootling-fitness-v1', 'rootling-mood-v1', 'rootling-pet-art-v1'];
   /* Soft warning line, not a cap: localStorage origins are commonly
    * limited to roughly 5 MB, so at ~4 MB of stored memory the app tells
    * the user and offers an export first. Nothing is dropped at this line
@@ -1224,7 +1224,10 @@
       if (!jwt) throw new Error('no session');
       return fetch(SUPABASE_URL + '/functions/v1/' + name, {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + jwt, 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        /* No 'apikey' header (fix 0f0255e, restored in v16): the functions'
+         * CORS rules allow only authorization + content-type, so sending
+         * apikey made the browser preflight fail. The JWT is enough. */
+        headers: { 'Authorization': 'Bearer ' + jwt, 'Content-Type': 'application/json' },
         body: JSON.stringify(body || {})
       });
     });
@@ -2407,10 +2410,22 @@
 
   function $(id) { return document.getElementById(id); }
 
+  var lastArtMood = 'stage'; /* v16: pet-art.js redraws with the same mood */
   function setPetImage(mood) {
+    lastArtMood = mood || 'stage';
     var img = els.petImg;
     var stage = stageFor(state.sunshine, state.form);
     var primary = mood === 'stage' ? stage.file : moodFile(state, mood);
+    /* v15: painted species portrait (species-art.js) leads when the
+     * chosen species has one; the stage/mood SVGs stay as the fallback.
+     * v16: the user's own drawing (pet-art.js) leads when they chose
+     * "Show on Home". Stage still shows through size, mood through overlays. */
+    var SA = window.RootlingSpeciesArt, sp = SA ? SA.speciesOf(state) : '';
+    var art = SA ? SA.src(sp, stage.id, mood) : '';
+    var PA = window.RootlingPetArt, mine = PA ? PA.portraitSrc(sp, stage.id) : '';
+    if (mine) art = mine;
+    if (art) primary = art;
+    if (SA) SA.decorate(img, art ? sp : '', stage.id, mood, !!mine);
     img.onerror = function () {
       if (img.src.indexOf(stage.file) === -1 && primary !== stage.file) {
         img.src = stage.file;
@@ -2679,7 +2694,10 @@
     var mode = state.pauseScreen || 'blank';
     if (els.quietArt) {
       els.quietArt.hidden = mode !== 'companion';
-      if (mode === 'companion') els.quietArt.src = (FORMS[state.form] || FORMS.plant).moods.sleepy;
+      if (mode === 'companion') {
+        var SAq = window.RootlingSpeciesArt, spq = SAq ? SAq.speciesOf(state) : '';
+        els.quietArt.src = (SAq && SAq.src(spq, stageFor(state.sunshine, state.form).id, 'sleepy')) || (FORMS[state.form] || FORMS.plant).moods.sleepy;
+      }
     }
     if (els.quietColour) els.quietColour.hidden = mode !== 'colour';
     if (els.quietView) els.quietView.hidden = false;
@@ -3165,6 +3183,13 @@
     setToggle: setToggle,
     promptFor: promptFor,
     getState: function () { return state; },
+    /* v16 (pet-art.js): redraw the pet after artwork changes, and a narrow
+     * door to the connected backend for the optional drawing backup. */
+    refreshPet: function () { try { if (state.petName) setPetImage(lastArtMood); } catch (e) { /* next render fixes it */ } },
+    connected: {
+      signedIn: function () { return !!sbUser; },
+      call: function (name, body) { return callFunction(name, body); }
+    },
     /* v12/v13: bonus experience from helping, fitness, and mood care.
      * Feeds the same growth points as check-ins (state.sunshine) AND the
      * pet's experience points (state.petXp), capped per day. */
@@ -3517,7 +3542,7 @@
       'rootling-persist-requested-v1', 'rootling-appearance-v1',
       'rootling-exec-v1', 'rootling-well-v1', 'rootling-social-v1',
       'rootling-time-v1', 'rootling-memorybook-v1', 'rootling-assistant-v1',
-      'rootling-assistant-secrets-v1', 'rootling-fitness-v1', 'rootling-mood-v1', CONSENT_KEY];
+      'rootling-assistant-secrets-v1', 'rootling-fitness-v1', 'rootling-mood-v1', 'rootling-pet-art-v1', CONSENT_KEY];
     var AREA_KEYS = [
       { key: 'rootling-exec-v1', label: 'Delete tasks and focus data' },
       { key: 'rootling-well-v1', label: 'Delete routines and wellbeing data' },
@@ -3528,7 +3553,8 @@
       { key: 'rootling-assistant-v1', label: 'Delete what Ask your pet learned, reminders, and people' },
       { key: 'rootling-assistant-secrets-v1', label: 'Delete Ask your pet keys' },
       { key: 'rootling-fitness-v1', label: 'Delete steps, workouts, and fitness goals' },
-      { key: 'rootling-mood-v1', label: 'Delete mood care data (mood checks, lifts, good things)' }
+      { key: 'rootling-mood-v1', label: 'Delete mood care data (mood checks, lifts, good things)' },
+      { key: 'rootling-pet-art-v1', label: 'Delete my pet drawings' }
     ];
     var wizardStep = 1;
     var privacyReturn = null; /* 'adopt' | 'main' | 'wizard' */
@@ -7212,7 +7238,9 @@
       if (img) {
         var src = 'assets/sprout-celebrate.svg';
         try {
-          if (st && st.form === 'animal') src = 'assets/creature-celebrate.svg';
+          var SAc = window.RootlingSpeciesArt, spc = SAc ? SAc.speciesOf(st) : '';
+          if (SAc && SAc.has(spc)) src = SAc.src(spc, 'grown', 'celebrate');
+          else if (st && st.form === 'animal') src = 'assets/creature-celebrate.svg';
           else if (st && st.calmMode) src = 'assets/sprout-celebrate-calm.svg';
         } catch (e) { /* keep the plant art */ }
         img.setAttribute('src', src);
@@ -9462,7 +9490,7 @@
     var VIEW_OF_ID = {
       'help-panel': 'home', 'stuck-offer': 'home', 'today-card': 'home', 'preview-card': 'home',
       'exec-view': 'focus', 'grounding-card': 'focus',
-      'time-view': 'activities', 'adventures-card': 'activities',
+      'time-view': 'activities', 'adventures-card': 'activities', 'pet-art-card': 'activities',
       'companions-view': 'companion', 'change-main-confirm': 'companion', 'daily-gift': 'companion',
       'train-view': 'companion',
       'support-open-row': 'support', 'safety-view': 'support', 'install-card': 'support',

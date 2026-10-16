@@ -605,3 +605,32 @@ body.calm .pet-fx svg,body.well-still .pet-fx svg{animation:none !important}
 @media (min-width:640px){.pet-img.has-art{width:calc(218px * var(--art-scale,1));height:calc(218px * var(--art-scale,1))}}
 .pick-art{width:72px;height:72px;object-fit:contain;display:block;margin:0 auto}
 .shelf-card .pick-art{width:64px;height:64px;flex:0 0 64px}
+
+/* ---------- v16: Draw your pet (pet-art.js) ---------- */
+.art-pad{margin-top:.75rem}
+.art-prompt{font-weight:600;margin:.25rem 0 .5rem}
+.art-canvas{display:block;width:100%;max-width:420px;aspect-ratio:1/1;margin:0 auto;background:var(--paper);border:2px dashed var(--line);border-radius:16px;touch-action:none;cursor:crosshair}
+.art-tools{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin:.6rem 0}
+.art-btn{min-height:var(--art-target,48px);min-width:var(--art-target,48px);padding:0 .9rem;border-radius:12px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.art-btn:focus-visible,.art-swatch:focus-visible{outline:3px solid var(--leaf);outline-offset:2px}
+.art-save{background:var(--leaf);color:#fff;border-color:var(--leaf)}
+.art-swatch{width:var(--art-target,48px);height:var(--art-target,48px);border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.art-swatch[aria-pressed="true"]{box-shadow:0 0 0 3px var(--ink)}
+.art-status{min-height:1.4em;text-align:center;color:var(--ink-soft)}
+.art-sprint{height:8px;border-radius:8px;background:var(--leaf-soft);overflow:hidden;max-width:420px;margin:0 auto .5rem}
+.art-sprint-fill{display:block;height:100%;width:0;background:var(--sage);transition:width .25s linear}
+.art-breath{display:flex;align-items:center;gap:.75rem;justify-content:center;margin:.25rem 0 .6rem}
+.art-breath-ring{width:40px;height:40px;border-radius:50%;border:3px solid var(--sage);transform:scale(.7);transition-property:transform;transition-timing-function:ease-in-out}
+.art-breath-ring.is-in{transform:scale(1.1)}
+.art-breath-word{color:var(--ink-soft);font-weight:600}
+.art-shelf-heading{margin:1rem 0 .4rem}
+.art-shelf{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.6rem}
+.art-item{display:flex;flex-direction:column;gap:.35rem;align-items:center;padding:.5rem;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
+.art-item img{width:96px;height:96px;object-fit:contain}
+.art-item .art-btn{min-height:40px;width:100%;font-size:.9rem}
+.art-use[aria-pressed="true"]{background:var(--leaf-soft);border-color:var(--leaf)}
+.art-empty{color:var(--ink-soft)}
+.pet-img.is-custom-art{object-fit:contain;border-radius:18px}
+body.calm .art-breath-ring,html.calm-motion .art-breath-ring{transition:none;transform:scale(.9)}
+body.calm .art-sprint-fill,html.calm-motion .art-sprint-fill{transition:none}
+@media (prefers-reduced-motion:reduce){.art-breath-ring,.art-sprint-fill{transition:none}}

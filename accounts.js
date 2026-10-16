@@ -52,7 +52,10 @@
     'rootling-assistant-v1',
     'rootling-assistant-secrets-v1',
     'rootling-fitness-v1',
-    'rootling-mood-v1'
+    'rootling-mood-v1',
+    /* v16: the pet drawings index (blobs live in IndexedDB under the
+     * account id, see pet-art.js). */
+    'rootling-pet-art-v1'
   ];
 
   var store = null;

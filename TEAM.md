@@ -31,7 +31,7 @@ A lead may add small hooks in the other lane, such as a store key, a VIEW_OF_ID 
 
 The check protects these element ids. Change this list only with Daniel's OK.
 
-- Computer: `ask-card`, `ask-log`, `ask-form`, `ask-input`, `ask-chips`, `ask-google-btn`, `ask-settings-card`, `fit-card`, `mood-card`, `mood-dots`, `mood-status`, `mood-watch`
+- Computer: `pet-art-card`, `pet-art-pad`, `pet-art-list`, `ask-card`, `ask-log`, `ask-form`, `ask-input`, `ask-chips`, `ask-google-btn`, `ask-settings-card`, `fit-card`, `mood-card`, `mood-dots`, `mood-status`, `mood-watch`
 - Muse: `pet-xp-line`, `connected-card`, `ai-access-card`, `privacy-mode-toggle`, `topics-card`, `topics-list`, `account-card`, `account-summary`, `today-card`, `brief-card`
 - Hidden by Daniel's choice on 2026-10-15 ("merge, ours leads"): `chat-card`, `fitness-card`. Muse's simpler chat and steps cards stay in the code but are hidden, so Home shows one chat and one step tracker.
 
@@ -51,7 +51,9 @@ The check protects these element ids. Change this list only with Daniel's OK.
 - `RootlingMood.status()` returns `{ level: 'none'|'watch'|'concern', reasons }`. Never show `level` to the user.
 - `RootlingFitness.summary()` returns today's and this week's steps, minutes, and goals.
 - `state.topics` (Muse's "Things you live with") is read by `assistant.js` to offer matching abilities first. It never guesses topics.
-- The `rootling-ai-access-v1` key's `privacyMode` setting is read by `assistant.js`.
+- The `rootling-ai-access-v1` key's `privacyMode` setting is read by `assistant.js` and `pet-art.js`.
+- v16: `RootlingApp.refreshPet()` redraws the pet picture. `RootlingApp.connected.{signedIn(), call(name, body)}` is the one door to the Supabase functions for other modules.
+- v16: `RootlingPetArt.portraitSrc(species, stageId)`, `.mountPad(el, opts)`, `.save(input, opts)`, `.loopFor(state)`, `.loopConfig(loop)`. See `docs/PET_ART_INTEGRATION.md`.
 
 ## Asks
 
@@ -76,10 +78,15 @@ Daniel asked for these himself, so Computer built them. Muse, please keep them w
 
 ## Version log owner tags
 - v7–v10 and the 2026-10-15 17:57 v12: Muse
-- v11, v12 (first), v13, and v14: Computer
+- v11, v12 (first), v13, v14, v15 (painted pets) and v16: Computer
 
 ## v15 note for Muse (from Computer)
 - Daniel asked for the pet pictures to be recreated, "more artistic and detailed". All 48 species now have painted portraits in `assets/pets/` (`<slug>.webp`, `<slug>-sm.webp`, and `<slug>-egg.webp` for non-plants).
 - `species-art.js` is loaded before `companions.js` and `app.js`. Hooks: `setPetImage`, the quiet view, and the timer celebration use it; the adopt grid and the shelf show thumbnails instead of emoji. When a painting shows, `#pet-species-badge` is hidden. The old SVGs stay as the fallback.
 - Your back bar (`.view-back-bar`), `readProfileGroup` multi-pick and gate password reset are kept as they are; `tools/check.js` now accepts them.
 - Please do not drop `species-art.js` from `index.html` / `sw.js` again — the check fails if you do.
+
+## v16 note for Muse (from Computer): Draw your pet
+- Daniel asked for pet artwork to plug into the game. New `pet-art.js` with `#pet-art-card` on Activities. Read `docs/PET_ART_INTEGRATION.md`; your tasks are in `docs/MUSE_PROMPT_pet_art.md`.
+- f9389cd was built on an older copy and dropped `species-art.js` from `index.html`/`app.js` (painted pets stopped showing) and the 0f0255e CORS fix (`apikey` header). v16 restores both and `tools/check.js` now fails on either. Please rebase on the newest `main`, never copy whole files from an old tree.
+- Backend (your lane): please deploy `supabase/migrations/20261016000000_pet_art.sql` and `supabase/functions/pet-art`.

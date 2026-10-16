@@ -6,6 +6,14 @@ Rootling — a cozy self-care pet progressive web app
 
 
 
+## v16 — Draw your pet (2026-10-16, Computer)
+
+- **Draw your pet** on the Activities tab, or add a picture you made. Tap "Show on Home" and your drawing becomes your companion's picture. It still grows by stage and shows moods.
+- **Gentle pacing that fits you:** an optional 1.5-minute quick sketch with small cheers for focus, or a slow breathing ring (in 2, out 4) with no timer, bigger buttons, and rest nudges when breathing needs care. Calm mode keeps everything still.
+- **Growth:** your first drawing each day gives 5 growth points (inside the 30-a-day bonus).
+- **Private by default:** drawings stay on this device, per account. An optional backup to your connected account is off by default and never runs in Privacy Mode.
+- **Repairs:** the painted pet portraits show again, and the Connected accounts CORS fix is back. Both had been undone by an older-copy push.
+
 ## v14 — Your real pet, pick several support styles, Back buttons, password reset (2026-10-15, Computer)
 
 - **The picture matches the companion you chose.** Before, every non-plant companion used one generic creature drawing. Now the Kraken is hand-drawn for each stage and mood, and every other species shows its own animal on a matching scene.

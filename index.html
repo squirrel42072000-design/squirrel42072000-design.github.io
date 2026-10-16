@@ -332,6 +332,19 @@
       </div>
     </section>
 
+    <!-- v16 (Computer, Daniel's request): Draw your pet. pet-art.js owns
+         the pad and the shelf. Drawings stay on this device unless backup
+         is turned on, and never while Privacy Mode is on. -->
+    <section class="card" id="pet-art-card" aria-labelledby="pet-art-heading">
+      <h3 id="pet-art-heading">Draw your pet</h3>
+      <p class="q">Draw your companion, or add a picture you made. Any lines count. You can show it on Home.</p>
+      <button type="button" class="btn btn-primary" id="pet-art-open">Draw your pet</button>
+      <div id="pet-art-pad" class="art-pad" hidden></div>
+      <h4 class="art-shelf-heading">Your drawings</h4>
+      <ul id="pet-art-list" class="art-shelf" aria-live="polite"></ul>
+      <label class="check-row"><input type="checkbox" id="pet-art-sync"> Back up my drawings to my connected account (off by default, never in Privacy Mode)</label>
+    </section>
+
     <!-- Your collection (2026-10-15): every companion you own. The main
          companion greets you on Home and speaks for your check-ins. -->
     <section class="card" id="companions-view" aria-labelledby="companions-heading">
@@ -1752,6 +1765,8 @@
 </section>
 
 <script src="accounts.js"></script>
+<script src="species-art.js"></script>
+<script src="pet-art.js"></script>
 <script src="companions.js"></script>
 <script src="traits.js"></script>
 <script src="burnoutEngine.js"></script>
