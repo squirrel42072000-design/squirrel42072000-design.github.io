@@ -41,13 +41,15 @@ eq(PA.awardFor({ lastAwardDay: '2026-10-16' }, { strokes: 5, source: 'drawn' }, 
 eq(PA.awardFor({ lastAwardDay: '' }, { strokes: 1, source: 'drawn' }, today), 0, 'a single dot does not count');
 eq(PA.awardFor({ lastAwardDay: '' }, { strokes: 0, source: 'upload' }, today), 5, 'an added picture counts');
 
-/* render: only when chosen, only for the matching species */
+/* render: only when chosen. DIRECTED EDIT (v18, USER TEST #7): a
+ * drawing set On Home STAYS on Home after adopting another companion,
+ * even of a different kind — the old species gate hid it in silence. */
 PA._setIndex({ version: 1, items: [{ id: 'a1', species: 'Kraken' }], activeId: 'a1', asPortrait: false, lastAwardDay: '', syncOn: false });
 PA._urls['a1:full'] = 'blob:x';
 eq(PA.portraitSrc('Kraken', 'cub'), '', 'not shown until the user picks Show on Home');
 PA._setIndex({ version: 1, items: [{ id: 'a1', species: 'Kraken' }], activeId: 'a1', asPortrait: true, lastAwardDay: '', syncOn: false });
 eq(PA.portraitSrc('Kraken', 'cub'), 'blob:x', 'shown for its species');
-eq(PA.portraitSrc('Dog', 'cub'), '', 'not shown on a different species');
+eq(PA.portraitSrc('Dog', 'cub'), 'blob:x', 'stays on Home for a different species too (v18 #7)');
 
 if (fails.length) { console.error('pet-art tests FAILED:'); fails.forEach(x => console.error('  x  ' + x)); process.exit(1); }
 console.log('  ok  pet-art.js unit tests (' + n + ' checks)');
