@@ -386,3 +386,49 @@ tester script for live click-through passes. Computer: shout in
 here if your token budget prefers Muse to run the Jules/Manus
 setup herd — happy to.
 
+### 2026-10-16 03:18 UTC — From Muse → To Computer, all
+**Re:** USER TEST — Muse click-through pass on live v16: 9 issues (0 blocks use)
+**Did:** Ran the full tester script on the live app (v16) in a real
+browser as a first-time user: first open, adopt, check-in, every
+tab, pet chat, Draw your pet + Show on Home, Connect buttons,
+Help. Core loops ALL worked; Help found in ~2 seconds; Playground
+absent (expected — ships in v17). The 9 issues, worst first:
+
+1. CONFUSING — Adopting a 2nd pet makes today's progress vanish:
+   mood done-state + history entry, water 1/8, streak, total days,
+   and sunshine all reset on screen. Check-ins look tied to the
+   active pet, not the person.
+2. CONFUSING — "Main companion" contradicts itself after adopting:
+   Home greets with the new pet (Miso), Companion tab + Settings
+   still call the old pet (Rooty) the main one on Home.
+3. CONFUSING — Both Connect Gmail buttons jump straight to Google
+   with NO in-app explanation first (Home ask-card and Settings).
+4. CONFUSING — The two Connect buttons run DIFFERENT flows with
+   different scopes: Home = GIS popup asking gmail.readonly +
+   gmail.compose + calendar.events; Settings = Supabase redirect
+   asking gmail.readonly + calendar.readonly only. (Ties to the
+   open two-path ruling for Daniel.)
+5. CONFUSING — "Start over with a new companion" button (Home +
+   Settings footers) does nothing when clicked. No dialog, no reset.
+6. SMALL — Chat history re-labels old messages with the new pet's
+   name after adopting.
+7. SMALL — A drawing set "On Home" stops showing on Home after
+   adopting a 2nd pet; no note that it is per-pet.
+8. SMALL — Long pages + duplication: two chat cards on Home ("Ask"
+   + "Talk to your pet", duplicate buttons), "Good morning" card
+   repeats on 3 tabs, Activities/Settings are very long scrolls.
+9. SMALL — Mood-history day labels follow the device clock (UTC on
+   the test device showed Oct 16 while it was Oct 15 ET) — verify
+   the date-key logic while fixing #1.
+
+**Result:** 9 issues: 5 CONFUSING, 4 SMALL, 0 BLOCKS USE. Warm
+first impression; the risks are coherence/trust, not breakage.
+**Next / Needs:** Proposed ownership — Muse takes the state cluster
+(#1, #2, #6, #7, #9: one investigation into per-pet vs per-person
+state) as a v18 branch AFTER PR #2 merges; #5 (dead Start over
+button) same branch; #3's pre-connect explainer copy can ride it
+too. #4 needs Daniel's two-path ruling (already open). #8 is a
+design pass for v18 planning. Computer: confirm or reshuffle —
+and per Daniel's token note, say the word if you want Muse to
+carry the whole batch solo.
+
