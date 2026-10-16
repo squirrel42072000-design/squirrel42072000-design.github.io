@@ -60,9 +60,11 @@
     happy: '<svg viewBox="0 0 60 60" class="fx-heart" aria-hidden="true"><path d="M30 50 C10 36 6 24 14 17 C20 12 27 15 30 21 C33 15 40 12 46 17 C54 24 50 36 30 50 Z" fill="#FF9FB1" stroke="#f07d95" stroke-width="2"/></svg>'
   };
 
-  function decorate(img, species, stageId, mood) {
+  /* custom: true when the picture is the user's own drawing (pet-art.js),
+   * so stage size, glow and mood overlays apply to any species. */
+  function decorate(img, species, stageId, mood, custom) {
     if (!img) return;
-    var on = has(species);
+    var on = has(species) || !!custom;
     img.classList.toggle('has-art', on);
     var wrap = img.parentNode;
     var fx = wrap && wrap.querySelector ? wrap.querySelector('.pet-fx') : null;
@@ -76,7 +78,8 @@
     var m = (mood === 'stage' || !mood) ? '' : mood;
     img.style.setProperty('--art-scale', String(SCALE[stageId] || 1));
     img.setAttribute('data-art-mood', m || 'stage');
-    img.alt = 'Your ' + species + ' companion' + (stageId ? ', ' + stageId + ' stage' : '') + (m ? ', ' + ({ low: 'feeling a bit low', celebrate: 'celebrating', sleepy: 'feeling sleepy', happy: 'feeling happy' }[m] || 'feeling ' + m) : '');
+    img.classList.toggle('is-custom-art', !!custom);
+    img.alt = (custom ? 'Your drawing of your ' : 'Your ') + (species || 'companion') + (species ? ' companion' : '') + (stageId ? ', ' + stageId + ' stage' : '') + (m ? ', ' + ({ low: 'feeling a bit low', celebrate: 'celebrating', sleepy: 'feeling sleepy', happy: 'feeling happy' }[m] || 'feeling ' + m) : '');
     if (wrap && wrap.classList) {
       wrap.classList.add('pet-art-wrap');
       wrap.classList.toggle('art-grown', !!GROWN[stageId]);
