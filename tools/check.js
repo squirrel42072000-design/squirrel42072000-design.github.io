@@ -9,9 +9,22 @@ const read = f => fs.readFileSync(path.join(R, f), 'utf8');
 const fails = [], notes = [];
 const fail = m => fails.push(m), ok = m => notes.push(m);
 
-/* 1. Every JS file parses. */
+/* 1. Every JS file parses. pet-playground.js is an ES module (the
+ * Pet Playground package ships as one), so on a script-goal parse
+ * failure its import/export statements are neutralized and the parse
+ * retried — the goal is a syntax gate, not a module-system ruling. */
 const jsFiles = fs.readdirSync(R).filter(f => f.endsWith('.js'));
-jsFiles.forEach(f => { try { new vm.Script(read(f), { filename: f }); } catch (e) { fail(`${f}: syntax error — ${e.message}`); } });
+jsFiles.forEach(f => {
+  const srcText = read(f);
+  try { new vm.Script(srcText, { filename: f }); }
+  catch (e) {
+    if (/^\s*(export|import)\s/m.test(srcText)) {
+      try { new vm.Script(srcText.replace(/^\s*export\s+/gm, '').replace(/^\s*import\s+.*$/gm, ''), { filename: f }); return; }
+      catch (e2) { fail(`${f}: syntax error — ${e2.message}`); return; }
+    }
+    fail(`${f}: syntax error — ${e.message}`);
+  }
+});
 ok(`${jsFiles.length} JS files parse`);
 
 /* 2. Protected element ids (TEAM.md). */
@@ -45,9 +58,9 @@ scripts.forEach(s => { if (sw.indexOf(`'./${s}'`) === -1) fail(`sw.js APP_SHELL 
 
 /* 4. Store keys are registered everywhere (accounts + delete lists). */
 const acc = read('accounts.js'), app = read('app.js');
-const STORE_KEYS = ['rootling-assistant-v1', 'rootling-assistant-secrets-v1', 'rootling-fitness-v1', 'rootling-mood-v1', 'rootling-ai-access-v1', 'rootling-connected-v1', 'rootling-pet-art-v1'];
+const STORE_KEYS = ['rootling-assistant-v1', 'rootling-assistant-secrets-v1', 'rootling-fitness-v1', 'rootling-mood-v1', 'rootling-ai-access-v1', 'rootling-connected-v1', 'rootling-pet-art-v1', 'rootling-playground-v1'];
 STORE_KEYS.forEach(k => { if (acc.indexOf(`'${k}'`) === -1) fail(`accounts.js APP_KEYS is missing '${k}' (data would leak across accounts)`); });
-['rootling-assistant-v1', 'rootling-fitness-v1', 'rootling-mood-v1', 'rootling-pet-art-v1'].forEach(k => {
+['rootling-assistant-v1', 'rootling-fitness-v1', 'rootling-mood-v1', 'rootling-pet-art-v1', 'rootling-playground-v1'].forEach(k => {
   const n = app.split(`'${k}'`).length - 1;
   if (n < 3) fail(`app.js: '${k}' should appear in MODULE_STORE_KEYS, ALL_KEYS, and AREA_KEYS (found ${n})`);
 });
@@ -72,6 +85,23 @@ if (/'apikey': SUPABASE_ANON_KEY/.test(app)) fail('app.js: callFunction sends an
 { const t = require('child_process').spawnSync(process.execPath, [path.join(__dirname, 'pet-art.test.js')], { encoding: 'utf8' });
   if (t.status !== 0) fail('pet-art.js unit tests failed:\n' + (t.stderr || t.stdout)); else ok('pet-art.js unit tests'); }
 if (app.indexOf('addExperience: function') === -1) fail('app.js: RootlingApp.addExperience is gone (pet growth from abilities depends on it)');
+
+/* 4b. v17 — Pet Playground wiring + connect honesty (fixes A–C).
+ * The playground host must be loaded with its mount point present,
+ * and the Connected-accounts connect handler must name its failure:
+ * no generic catch-all, explicit branches for expired session, HTTP
+ * status, missing URL, and network failure, plus the embedded-
+ * browser guard (Google refuses sign-in inside FB/Instagram webviews). */
+if (scripts.indexOf('playground-host.js') === -1) fail('index.html no longer loads playground-host.js (Pet Playground, v17)');
+if (!/<[^>]*\bid="pet-playground"/.test(html)) fail('index.html: #pet-playground mount point is missing (Pet Playground, v17)');
+if (sw.indexOf("'./pet-playground.js'") === -1) fail('sw.js APP_SHELL is missing ./pet-playground.js (the Playground module would not be cached for offline)');
+if (app.indexOf('Could not start the connection') !== -1) fail('app.js: the connect handler still hides failures behind the generic "Could not start the connection" line (v17 fix A)');
+['Opening Google…', 'Your sign-in expired. Sign in again on this card, then tap Connect.', 'Connect failed (HTTP ', 'Google link did not come back. Try again.', "Could not reach Rootling's server (network/CORS)."].forEach(m => {
+  if (app.indexOf(m) === -1) fail(`app.js: connect handler is missing its honest status "${m}" (v17 fix A)`);
+});
+if (app.indexOf('refreshSession') === -1) fail('app.js: the connect path never refreshes a stale session before oauth-start (v17 fix B)');
+if (app.indexOf('FB_IAB') === -1 || app.indexOf('Open in Chrome') === -1 || app.indexOf('Copy link') === -1) fail('app.js: embedded-browser guard (FB_IAB / Open in Chrome / Copy link) is missing (v17 fix C)');
+ok('v17 playground + connect-honesty pins present');
 
 /* 5. Guardrails. */
 const asst = read('assistant.js'), brain = read('pet-brain.js');
