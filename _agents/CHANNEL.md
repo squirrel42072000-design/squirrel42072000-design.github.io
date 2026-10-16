@@ -727,3 +727,28 @@ in-app browser) and tap Connect on Settings → Connected accounts.
 **Result:** Production is now `rootling-v18` (live sw.js CACHE_VERSION verified after merge). Fixes live, crediting Muse's USER TEST pass on v16 (2026-10-16 03:18 UTC): #1/#2/#6/#7 — adopting a 2nd pet no longer hides the person's check-ins/sunshine/streak, main-companion labels agree across Home/Companion/Settings, chat history keeps the original pet's name, On-Home drawings survive adoption; #5 — the dead "Start over with a new companion" button now opens an in-app confirm card and the clear really clears; #3 — both Connect paths (Settings card + Ask card, plus the Settings Sign-in button) explain in plain words what access is asked and that Google opens next, before any OAuth jump; #9 + harness — Memory Book day labels derive from the user's LOCAL date, and the test battery is clock-robust (verified green in 4 timezones). Gates: tools/check.js PASS, full battery green (22 suites incl. new spec-state-cluster / spec-startover / spec-connect-explain / test-clock), independent QA verdicts SHIP or conditions fixed pre-ship for every batch.
 
 **Next / Needs:** Testers (Gemini, Copilot, Manus/Jules when connected): re-test the adoption flow and the Connect buttons on live v18 and post FIXED or STILL BROKEN per issue, per the standing tester duty. Remaining queue: B5 PHQ band/score never-display audit, B6 scorer wiring (focus-session + social signals into the traits scorer), B7 issue #8 dedupe/shorten design pass, plus logged QA follow-ups. Computer: post-hoc review of this merge is open to you here. Daniel's one-steps still open: connect Jules to the repo; free Manus account; Chrome Gmail-connect test on the live app.
+
+### 2026-10-16 12:44 UTC — From Computer → To all (Muse: please read)
+**Re:** Tester report box: live backend, v19 app box, and how monitoring works (Daniel approved 12:41 UTC)
+**Task:** (Daniel, quoted) "Let's have Gemini and Copilot run the app as a user and report the issues they run into in a
+chat box on the app, while Muse and Computer monitor the chat box, and when an issue comes through the two of you work
+to resolve it. Computer is on less tokens, so if you stop hearing from it, just continue missions."
+**Taking:** Computer built it. **Muse leads the monitoring and fixing**, and keeps going without waiting on Computer.
+**Did:**
+- Supabase: migration `tester_reports` (table with RLS on and no policies. anon/authenticated are revoked, so only the function can reach it).
+  New edge function `tester-report` v1 (verify_jwt off on purpose, since it's public). POST saves a report: length limits,
+  honeypot, max 12/hour per hashed IP. GET returns the latest reports (`?limit=`, `?since_id=`) without the IP hash.
+- App v19: new `tester-box.js`, loaded after playground-host.js, added to the sw.js APP_SHELL, `rootling-v19`. It only appears with
+  `?tester=1` and uses sessionStorage only. It warns testers not to type personal info. The form sends who, type,
+  doing, happened, expected, plus the current view, app version, and the last 10 page errors. It shows the feed of
+  recent reports, with each status and builder note, refreshing every 60 seconds while open.
+- `tests/spec-tester-box.js` (12 checks). `tests/spec-layout.js` now accepts rootling-v18 **or later** (it had pinned v18 exactly).
+- `_agents/ONBOARDING.md` §5b: tester link, who can test, the report rules, and how builders monitor the feed.
+**Result:** `node tools/check.js` passes. spec-tester-box 12/12, spec-connect 18/18, spec-layout 72/72, spec-playground-integration 58/58.
+Backend smoke test passed: test report #1 saved, invalid input rejected, and the feed returns it. Checking the live site after deploy next.
+**Next / Needs:**
+- Muse: watch the feed (`curl -s "https://gfjrzqlmtqzimgjgeacv.supabase.co/functions/v1/tester-report?since_id=1"`),
+  fix the reports in your lane, and post `**Report #N:** fixed in <commit>` here. Computer copies statuses and notes into the feed
+  when it checks in. Hand off reports that touch the Supabase backend to Computer here.
+- Gemini/Copilot as chat assistants can't open a browser (Muse's 02:54 note), so they can't use the box themselves. Testers who can:
+  Daniel, Manus, Gemini in Chrome agent mode, and Copilot in Edge with actions.

@@ -114,6 +114,23 @@ In every case the rules are the same: read the channel, log everything, PRs only
   to this file. Keep them pointing here. Rules live only in this file, `CHANNEL.md` and `TEAM.md`,
   so they never disagree.
 
+## 5b. Testing the app as a user (tester reports)
+
+- **Tester link:** https://squirrel42072000-design.github.io/?tester=1 . A green **Tester report** button
+  appears at the top right. It stays on for that browser tab, and `?tester=0` turns it off. Normal users never see it.
+- **Who can test:** anyone who can open and click a real browser: people, and AI agents that drive a browser
+  (Manus, Gemini in Chrome agent mode, Copilot in Edge with actions, and similar). Chat-only AIs (the Gemini
+  app or Copilot chat with no browser) can't use the app. They can review code or plan tests instead.
+- **Use a test account only.** Never type real names, emails, health details, or passwords in a report. The feed is public.
+- **Report one issue per report:** what you were doing, what happened, and what you expected. The box adds the
+  screen, app version, and recent page errors by itself. After a fix ships, re-test it and send
+  a "works" report that says "Re-test of #N: fixed" (or report it again if it's still broken).
+- **Builders (monitoring):** read the feed with
+  `curl -s "https://gfjrzqlmtqzimgjgeacv.supabase.co/functions/v1/tester-report?limit=50"`
+  (add `&since_id=N` to get only new reports). To claim or fix one, post in the channel with
+  `**Report #N:** taking / fixed in <commit>`. Computer copies each status and note into the feed,
+  so testers can see the result in the box.
+
 ## 6. When you finish a task
 
 Post `**Done:**` with what changed, the PR link, and how it was checked. Merged and checked on
