@@ -103,6 +103,58 @@ if (app.indexOf('refreshSession') === -1) fail('app.js: the connect path never r
 if (app.indexOf('FB_IAB') === -1 || app.indexOf('Open in Chrome') === -1 || app.indexOf('Copy link') === -1) fail('app.js: embedded-browser guard (FB_IAB / Open in Chrome / Copy link) is missing (v17 fix C)');
 ok('v17 playground + connect-honesty pins present');
 
+/* 4c. v18 — state cluster (USER TEST #1/#2/#6/#7): check-ins, care days
+ * and sunshine are the PERSON's, chat lines keep their speaker's name,
+ * and a drawing set On Home stays on Home. */
+const comp = read('companions.js'), art = read('pet-art.js');
+if (comp.indexOf('rootling-person-state-v1') === -1 || comp.indexOf('applyPersonState') === -1) fail('companions.js: per-person state carry (v18 #1) is missing');
+if (app.indexOf('applyPersonState(state)') === -1) fail('app.js: adopt form never folds per-person state into the new companion (v18 #1)');
+if (app.indexOf('msg.petName') === -1 || app.indexOf('m.petName || state.petName') === -1) fail('app.js: chat lines do not keep the original pet name (v18 #6)');
+if (art.indexOf('it.species !== species') !== -1) fail('pet-art.js: the species gate that hid On-Home drawings after adoption is back (v18 #7)');
+ok('v18 state-cluster pins present');
+
+/* 4d. v18 B2 — Start over: the confirm is the in-app #reset-confirm
+ * card (never window.confirm, which some in-app browsers suppress),
+ * and the reset scrubs person progress from every store the B1 carry
+ * reads, so cleared sunshine/check-ins cannot resurrect on re-adopt. */
+if (html.indexOf('id="reset-confirm"') === -1 || html.indexOf('id="reset-confirm-yes"') === -1 || html.indexOf('id="reset-confirm-no"') === -1) fail('index.html: the in-app start-over confirm card is missing (v18 B2)');
+if (app.indexOf("window.confirm('Start over") !== -1) fail('app.js: start over is back on a native confirm dialog (v18 B2)');
+if (app.indexOf('clearPersonProgress') === -1) fail('app.js: start over never scrubs person progress from the other stores (v18 B2)');
+if (comp.indexOf('clearPersonProgress') === -1) fail('companions.js: clearPersonProgress is missing (v18 B2)');
+if (comp.indexOf('rootling-startover-pending-v1') === -1 || app.indexOf('beginStartOver') === -1) fail('companions.js/app.js: the durable start-over pending mark is missing (v18 B2)');
+ok('v18 start-over pins present');
+
+/* 4e. v18 B3 — Pre-connect explainer: both Connect buttons explain, in
+ * plain words, what access is asked for and that Google opens next,
+ * BEFORE any OAuth jump. Settings path = the in-app #connect-confirm
+ * card gating startConnectedConnect; Ask path = the withGoogle consent
+ * reply gating proceedGoogle. */
+if (html.indexOf('id="connect-confirm"') === -1 || html.indexOf('id="connect-confirm-yes"') === -1 || html.indexOf('id="connect-confirm-no"') === -1) fail('index.html: the in-app pre-connect explainer card is missing (v18 B3)');
+if (html.indexOf('Google will open') === -1) fail('index.html: the pre-connect explainer never says Google opens next (v18 B3)');
+if (html.indexOf('cannot change your calendar') === -1) fail('index.html: the Settings pre-connect explainer must stay read-only-true — the Supabase flow grants gmail.readonly + calendar.readonly only, no drafts, no event adds (v18 B3 QA)');
+if (app.indexOf('showConnectConfirm') === -1 || app.indexOf('startConnectedConnect') === -1) fail('app.js: the Settings Connect button is not gated by the explainer (v18 B3)');
+if (html.indexOf('id="signin-confirm"') === -1 || html.indexOf('id="signin-confirm-yes"') === -1 || html.indexOf('id="signin-confirm-no"') === -1) fail('index.html: the in-app pre-sign-in explainer card is missing (v18 B3 QA)');
+if (html.indexOf('only your name badge') === -1) fail('index.html: the pre-sign-in explainer must say sign-in is only a name badge and does not read email (v18 B3 QA)');
+if (app.indexOf('showSigninConfirm') === -1 || app.indexOf('startGoogleSignin') === -1) fail('app.js: the Settings Sign in button is not gated by its explainer (v18 B3 QA)');
+if (read('assistant.js').indexOf('inEmbeddedBrowser') === -1) fail('assistant.js: the Ask connect path has no embedded-browser refusal (v18 B3 QA)');
+const asstB3 = read('assistant.js');
+if (asstB3.indexOf('Before we connect: Google will open next') === -1 || asstB3.indexOf('proceedGoogle') === -1) fail('assistant.js: the Ask Connect path is not gated by the explainer (v18 B3)');
+ok('v18 pre-connect explainer pins present');
+
+/* 4f. v18 B4 — Clock-robust tests + USER TEST #9: the two suites that
+ * failed late at night (spec-exec relative-time fixtures, spec-memory
+ * updated-date) now pin both clocks (Node + jsdom window) to a safe
+ * local midday via tests/test-clock.js, and a Memory Book timestamp's
+ * day label derives from the user's LOCAL date — dateOf parses a
+ * timestamp instant, never slices the (UTC) date out of its string. */
+if (app.indexOf("v.indexOf('T')") === -1 || app.indexOf('isNaN(dt.getTime())') === -1) fail('app.js: dateOf slices the date out of timestamp strings again — day labels must derive from the local date (v18 B4 / USER TEST #9)');
+if (read('tests/spec-exec.js').indexOf('test-clock') === -1 || read('tests/spec-memory.js').indexOf('test-clock') === -1) fail('tests: spec-exec / spec-memory no longer pin their clocks — the late-night failures will return (v18 B4)');
+if (read('tests/spec-exec.js').indexOf('installWindow') === -1 || read('tests/spec-memory.js').indexOf('installWindow') === -1 ||
+    read('tests/spec-exec.js').indexOf('installNode') === -1 || read('tests/spec-memory.js').indexOf('installNode') === -1) fail('tests: spec-exec / spec-memory must actually install the pinned clock in both realms, not just require it (v18 B4 QA)');
+if (read('tests/spec-memory.js').indexOf('2026-10-14T23:30:00-04:00') === -1 || read('tests/spec-memory.js').indexOf('2026-10-15T03:30:00.000Z') === -1) fail('tests/spec-memory.js: the paired USER TEST #9 timestamp fixtures are missing (v18 B4 QA)');
+if (!fs.existsSync(path.join(R, 'tests/test-clock.js'))) fail('tests/test-clock.js is missing (v18 B4)');
+ok('v18 clock-robust test pins present');
+
 /* 5. Guardrails. */
 const asst = read('assistant.js'), brain = read('pet-brain.js');
 if (!/988/.test(asst) || !/988/.test(brain)) fail('988 crisis line missing from assistant.js or pet-brain.js');

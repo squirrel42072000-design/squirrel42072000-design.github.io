@@ -214,7 +214,7 @@ function visible(d, id) {
    * last two assertions pin both. */
   console.log('— Sensory + appearance settings —');
   const swJs = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-  assert(swJs.indexOf("var CACHE_VERSION = 'rootling-v17'") !== -1, 'service worker cache is bumped to rootling-v17');
+  assert(swJs.indexOf("var CACHE_VERSION = 'rootling-v18'") !== -1, 'service worker cache is bumped to rootling-v18');
   assert(/req\.mode === 'navigate' \|\| SHELL_PATHS/.test(swJs), 'service worker serves page loads + shell files network-first (stale shells cannot stick)');
   const dS = d; /* the adopted window from the tab tests above */
   dS.getElementById('calm-checkbox').click();

@@ -55,17 +55,66 @@ function makeApp(userAgent) {
   assert(appSrc.indexOf("err.message === 'no session'") !== -1 || appSrc.indexOf('err && err.message') !== -1,
     'the connect catch distinguishes the no-session cause');
 
-  console.log('— 1. No session: honest expired message —');
+  console.log('— 1. Explainer first (v18 B3), then no session: honest expired message —');
   {
     const dom = makeApp(); const w = dom.window, d = w.document;
     await tick(300);
     const btn = d.getElementById('connected-connect-btn');
     assert(!!btn, 'the Connected accounts connect button exists');
     btn.click();
+    await tick(60);
+    const card = d.getElementById('connect-confirm');
+    assert(!!card && !card.hidden, 'B3: the first Connect tap shows the pre-connect explainer card');
+    assert(!!card && card.textContent.indexOf('Google will open') !== -1 && card.textContent.indexOf('cannot change your calendar') !== -1,
+      'B3: the explainer says what access is asked for (read-only) and that Google opens next');
+    const msg0 = d.getElementById('connected-msg');
+    assert(!!msg0 && msg0.textContent !== 'Your sign-in expired. Sign in again on this card, then tap Connect.',
+      'B3: no OAuth step runs before the user says yes on the explainer');
+    d.getElementById('connect-confirm-yes').click();
     await tick(120);
+    assert(card.hidden, 'B3: saying yes hides the explainer and starts the connect');
     const msg = d.getElementById('connected-msg');
     assert(!!msg && msg.textContent === 'Your sign-in expired. Sign in again on this card, then tap Connect.',
-      'a tap with no usable session says the sign-in expired (got: "' + (msg ? msg.textContent : '') + '")');
+      'after yes, a tap with no usable session says the sign-in expired (got: "' + (msg ? msg.textContent : '') + '")');
+  }
+
+  console.log('— 1b. Explainer "Not now": nothing connects —');
+  {
+    const dom = makeApp(); const w = dom.window, d = w.document;
+    await tick(300);
+    d.getElementById('connected-connect-btn').click();
+    await tick(60);
+    d.getElementById('connect-confirm-no').click();
+    await tick(60);
+    const card = d.getElementById('connect-confirm');
+    assert(!!card && card.hidden, 'B3: "Not now" hides the explainer');
+    const msg = d.getElementById('connected-msg');
+    assert(!!msg && msg.textContent === 'Okay — nothing was connected.',
+      'B3: "Not now" says plainly that nothing was connected (got: "' + (msg ? msg.textContent : '') + '")');
+  }
+
+  console.log('— 1c. Sign in: badge-only explainer first (v18 B3 QA) —');
+  {
+    const dom = makeApp(); const w = dom.window, d = w.document;
+    await tick(300);
+    d.getElementById('connected-signin-btn').click();
+    await tick(60);
+    const card = d.getElementById('signin-confirm');
+    assert(!!card && !card.hidden, 'B3 QA: the first Sign in tap shows the pre-sign-in explainer card');
+    assert(!!card && card.textContent.indexOf('only your name badge') !== -1 && card.textContent.indexOf('does not read your email') !== -1,
+      'B3 QA: the sign-in explainer says badge-only, no email reading (no Connect overclaim)');
+    d.getElementById('signin-confirm-no').click();
+    await tick(60);
+    assert(card.hidden, 'B3 QA: sign-in "Not now" hides the explainer');
+    const msg = d.getElementById('connected-msg');
+    assert(!!msg && msg.textContent === 'Okay — you are not signed in.',
+      'B3 QA: sign-in "Not now" says plainly you are not signed in (got: "' + (msg ? msg.textContent : '') + '")');
+    d.getElementById('connected-signin-btn').click();
+    await tick(60);
+    assert(!card.hidden, 'B3 QA: tapping Sign in again re-shows the explainer');
+    d.getElementById('signin-confirm-yes').click();
+    await tick(60);
+    assert(card.hidden, 'B3 QA: sign-in Yes hides the explainer and proceeds (no Supabase client in jsdom, so no jump)');
   }
 
   console.log('— 2. Embedded browser: no redirect, guidance + Copy link —');

@@ -28,6 +28,8 @@
   var VAULT_KEY = 'rootling-vault-v1';
   var LIVE_KEY = 'rootling-live-companion-v1';
   var PENDING_KEY = 'rootling-pending-adopt-v1';
+  var PERSON_KEY = 'rootling-person-state-v1';
+  var STARTOVER_KEY = 'rootling-startover-pending-v1';
   var OVERRIDE_KEY = 'rootling-active-override';
   var JUST_ADOPTED_KEY = 'rootling-just-adopted';
   var ADOPTING_KEY = 'rootling-adopting';
@@ -225,13 +227,92 @@
       else lsRemove(k);
     });
   }
+  /* ---- per-person state (v18, USER TEST #1): check-ins, care days and
+   * sunshine belong to the PERSON, not to one pet. Adopting or visiting
+   * another companion must never hide them. Pet-only facts (name, form,
+   * species, voice picks) stay per-pet in the vault as before. ---- */
+  function personFromState(st) {
+    if (!st || typeof st !== 'object') return null;
+    return {
+      sunshine: typeof st.sunshine === 'number' ? st.sunshine : 0,
+      checkins: (st.checkins && typeof st.checkins === 'object') ? st.checkins : {},
+      careDays: Array.isArray(st.careDays) ? st.careDays.slice() : []
+    };
+  }
+  function mergePerson(a, b) {
+    a = a || { sunshine: 0, checkins: {}, careDays: [] };
+    b = b || { sunshine: 0, checkins: {}, careDays: [] };
+    var checkins = {};
+    [a.checkins, b.checkins].forEach(function (src) {
+      Object.keys(src || {}).forEach(function (day) {
+        if (!checkins[day]) { checkins[day] = src[day]; return; }
+        var merged = {};
+        [checkins[day], src[day]].forEach(function (rec) {
+          Object.keys(rec || {}).forEach(function (type) {
+            var cur = merged[type], nxt = rec[type];
+            if (!cur || (nxt && typeof nxt.points === 'number' && (typeof cur.points !== 'number' || nxt.points >= cur.points))) merged[type] = nxt;
+          });
+        });
+        checkins[day] = merged;
+      });
+    });
+    var days = {};
+    a.careDays.concat(b.careDays).forEach(function (d) { days[d] = 1; });
+    return {
+      sunshine: Math.max(a.sunshine || 0, b.sunshine || 0),
+      checkins: checkins,
+      careDays: Object.keys(days).sort()
+    };
+  }
+  function applyPersonToState(st, person) {
+    if (!st || !person) return st;
+    var m = mergePerson(personFromState(st), person);
+    st.sunshine = m.sunshine; st.checkins = m.checkins; st.careDays = m.careDays;
+    return st;
+  }
+  function mergedPersonFromStores() {
+    /* Merge order matters (QA, v18): stale vault copies first, the
+     * saved person stash next, and the LIVE state last — mergePerson
+     * lets the later source win a tie, and the live state is the
+     * person's newest truth (a same-day edit must never be reverted
+     * by an older vault copy). */
+    var person = null;
+    var vault = loadVault();
+    Object.keys(vault).forEach(function (id) {
+      if (vault[id]) person = mergePerson(person, personFromState(parseJson(vault[id]['sprout-state-v1'])));
+    });
+    person = mergePerson(person, personFromState(parseJson(lsGet(PERSON_KEY))));
+    person = mergePerson(person, personFromState(parseJson(lsGet('sprout-state-v1'))));
+    return person;
+  }
+  function stashPerson() {
+    var person = mergedPersonFromStores();
+    lsSet(PERSON_KEY, JSON.stringify(person));
+    return person;
+  }
+  function stateStringWithPerson(stateStr, person) {
+    var st = parseJson(stateStr);
+    if (!st) return stateStr;
+    applyPersonToState(st, person);
+    return JSON.stringify(st);
+  }
+
   function swapTo(companionId) {
     var reg = loadRegistry();
     var vault = loadVault();
     var live = liveId();
     if (live && live !== companionId) vault[live] = snapshotLive();
     if (live !== companionId) {
-      restoreSnapshot(vault[companionId] || null);
+      /* Carry the person's progress into the incoming pet's state, and
+       * keep the outgoing pet's copy in step, before the swap. */
+      var person = mergedPersonFromStores();
+      if (live && vault[live]) vault[live]['sprout-state-v1'] = stateStringWithPerson(vault[live]['sprout-state-v1'], person);
+      var incoming = vault[companionId] || null;
+      if (incoming && incoming['sprout-state-v1']) {
+        incoming = Object.assign({}, incoming);
+        incoming['sprout-state-v1'] = stateStringWithPerson(incoming['sprout-state-v1'], person);
+      }
+      restoreSnapshot(incoming);
       lsSet(LIVE_KEY, companionId);
     }
     /* Choosing a companion is durable: the chosen one takes the star, so
@@ -242,6 +323,7 @@
     saveRegistry(reg);
   }
   function clearLiveForNewCompanion() {
+    stashPerson(); /* the person's progress waits for the new companion */
     var vault = loadVault();
     var live = liveId();
     if (live) vault[live] = snapshotLive();
@@ -280,6 +362,11 @@
     var adopting = false;
     try { adopting = !!window.sessionStorage.getItem(ADOPTING_KEY); } catch (e) { adopting = false; }
     if (adopting) return; /* mid-adoption of another companion: leave the fresh stores alone */
+    /* Start over (v18 B2) is durable, not just for this session: until
+     * the user adopts a new companion, no saved companion is quietly
+     * restored as live — that made Start Over look like it did nothing
+     * on the next visit whenever a 2nd companion was in the collection. */
+    if (lsGet(STARTOVER_KEY)) return;
     var reg = seedFromExistingPet();
     if (!reg.companions.length) return;
     /* Exactly one main. */
@@ -334,6 +421,7 @@
 
   /* Called by the core adopt form when a companion is adopted. */
   function registerAdoption(info) {
+    lsRemove(STARTOVER_KEY); /* adopting ends any pending start-over */
     var reg = loadRegistry();
     var adoptAsMain = false;
     try {
@@ -380,7 +468,52 @@
         sel.dispatchEvent(new window.Event('change', { bubbles: true }));
       }
     } catch (e) { /* the pick still stands in the registry */ }
+    /* v18 (USER TEST #2): Home, the shelf and Settings must agree on the
+     * main companion right after adoption — not only after a reload. */
+    try { renderShelf(); renderGift(); fillManageCard(); } catch (e) { /* next render fixes it */ }
     return entry;
+  }
+
+  /* Called by the core adopt form with its in-memory state, before it
+   * saves: fold the person's saved progress into the new companion's
+   * state so check-ins, care days and sunshine show at once (v18 #1). */
+  function applyPersonState(stateObj) {
+    if (!stateObj) return stateObj;
+    var person = mergedPersonFromStores();
+    applyPersonToState(stateObj, person);
+    lsRemove(PERSON_KEY);
+    return stateObj;
+  }
+
+  /* Start over (v18 B2): mark the start-over as pending, durably, so
+   * ensureOnLoad does not restore another companion as live on the
+   * next visit. registerAdoption clears the mark. */
+  function beginStartOver() {
+    lsSet(STARTOVER_KEY, '1');
+  }
+
+  /* Start over (v18 B2): the person's progress must go from EVERY
+   * store the B1 carry reads — the stash and each companion's saved
+   * snapshot — or the next adoption quietly brings back the sunshine
+   * and check-ins the user was told were cleared. Companions
+   * themselves stay; only the person layer (sunshine / check-ins /
+   * care days) is scrubbed from their snapshots. */
+  function clearPersonProgress() {
+    lsRemove(PERSON_KEY);
+    var vault = loadVault();
+    Object.keys(vault).forEach(function (id) {
+      var snap = vault[id];
+      if (!snap || !snap['sprout-state-v1']) return;
+      var st = parseJson(snap['sprout-state-v1']);
+      if (!st) return;
+      st.sunshine = 0;
+      st.checkins = {};
+      st.careDays = [];
+      var copy = Object.assign({}, snap);
+      copy['sprout-state-v1'] = JSON.stringify(st);
+      vault[id] = copy;
+    });
+    saveVault(vault);
   }
 
   /* Rename any companion, free, any time. The name lives in the
@@ -435,6 +568,9 @@
   window.RootlingCompanions = {
     registry: loadRegistry,
     registerAdoption: registerAdoption,
+    applyPersonState: applyPersonState,
+    clearPersonProgress: clearPersonProgress,
+    beginStartOver: beginStartOver,
     rename: renameCompanion,
     chooseNewMain: chooseNewMain,
     identityLine: identityLine,

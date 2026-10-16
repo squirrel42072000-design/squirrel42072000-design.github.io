@@ -1705,27 +1705,56 @@
     document.head.appendChild(s);
   }
   var pendingGoogle = [];
+  var googleConsentWait = false;
+  /* Same embedded-browser guard as app.js (v18 B3, QA condition):
+   * Google refuses sign-in inside in-app browsers — never open the
+   * Google window there; point to a real browser instead. */
+  function inEmbeddedBrowser() {
+    var ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+    return /FBAN|FBAV|FB_IAB|Instagram|Line\/|Twitter|Snapchat|TikTok|; wv\)/.test(ua);
+  }
+  /* Pre-connect explainer (v18 B3): before ANY jump to Google, say in
+   * plain words what access is asked for and that Google opens next.
+   * "Not now" connects nothing. A live token needs no new Google ask,
+   * so it never re-explains. */
   function withGoogle(fn) {
     if (googleToken && googleToken.exp > Date.now()) { fn(googleToken.t); return; }
     if (!googleClientId()) { googleSetupHelp(); return; }
     pendingGoogle.push(fn);
-    if (pendingGoogle.length > 1) return;
+    if (googleConsentWait) return;
+    googleConsentWait = true;
+    if (inEmbeddedBrowser()) {
+      googleConsentWait = false;
+      pendingGoogle = [];
+      reply({ text: 'Google blocks sign-in inside the Facebook/Instagram browser. Tap the menu (three dots), then “Open in Chrome”, then connect there. Nothing was shared.' });
+      return;
+    }
+    reply({ text: 'Before we connect: Google will open next, and Google will ask you to say yes. If you say yes, I can read your email, save drafts (I never send email), and see and add calendar events — only when you ask. You can disconnect at any time.',
+      buttons: [{ label: 'Yes, open Google', cls: 'btn-primary', fn: function () { googleConsentWait = false; proceedGoogle(); } },
+        { label: 'Not now', cls: 'btn-ghost', fn: function () { googleConsentWait = false; pendingGoogle = []; reply({ text: 'Okay — nothing was connected.' }); } }] });
+  }
+  function proceedGoogle() {
+    if (!pendingGoogle.length) return;
+    if (inEmbeddedBrowser()) { pendingGoogle = []; return; }
+    /* Drain the queue at entry (v18 B3 QA): a second tap on the still-
+     * live "Yes" button then finds an empty queue and stops, instead
+     * of opening a second Google window. */
+    var q = pendingGoogle; pendingGoogle = [];
     loadGis(function () {
       try {
         var client = window.google.accounts.oauth2.initTokenClient({
           client_id: googleClientId(), scope: GSCOPES,
           callback: function (resp) {
-            var q = pendingGoogle; pendingGoogle = [];
             if (resp && resp.access_token) {
               googleToken = { t: resp.access_token, exp: Date.now() + (Number(resp.expires_in || 3500) - 60) * 1000 };
               if (!st.settings.googleOn) { st.settings.googleOn = true; save(); renderGoogleBtn(); reply({ text: 'Google is connected. I can read your inbox, save drafts, and see and add calendar events \u2014 only when you ask.', lines: [xpGive(5, 'connected google')].filter(Boolean) }); }
               q.forEach(function (f) { f(resp.access_token); });
             } else reply({ text: 'Google did not give permission, so I did not read anything.' });
           },
-          error_callback: function () { pendingGoogle = []; reply({ text: 'The Google window closed before finishing. Nothing was shared.' }); }
+          error_callback: function () { reply({ text: 'The Google window closed before finishing. Nothing was shared.' }); }
         });
         client.requestAccessToken({ prompt: st.settings.googleOn ? '' : 'consent' });
-      } catch (e) { pendingGoogle = []; reply({ text: 'Google sign-in did not start. Check the Client ID in Settings.' }); }
+      } catch (e) { reply({ text: 'Google sign-in did not start. Check the Client ID in Settings.' }); }
     });
   }
   function googleSetupHelp() {

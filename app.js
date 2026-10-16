@@ -1004,7 +1004,7 @@
       var p = document.createElement('p');
       p.className = 'chat-line';
       var who = document.createElement('strong');
-      who.textContent = m.role === 'user' ? 'You: ' : (state.petName || 'Pet') + ': ';
+      who.textContent = m.role === 'user' ? 'You: ' : (m.petName || state.petName || 'Pet') + ': ';
       p.appendChild(who);
       p.appendChild(document.createTextNode(m.text));
       log.appendChild(p);
@@ -1012,7 +1012,11 @@
     log.scrollTop = log.scrollHeight;
   }
   function pushChat(role, text) {
-    loadChat().messages.push({ role: role, text: text, at: Date.now() });
+    /* v18 (USER TEST #6): a pet message keeps the name of the pet who
+     * said it, so old lines never get re-labelled after a new adoption. */
+    var msg = { role: role, text: text, at: Date.now() };
+    if (role !== 'user') msg.petName = state.petName || 'Pet';
+    loadChat().messages.push(msg);
     saveChat();
     renderChat();
     /* v15: a reply you cannot see reads as a dead app — bring the
@@ -1193,6 +1197,8 @@
     var si = gel('connected-signin-btn'), cn = gel('connected-connect-btn'),
         sc = gel('connected-scan-btn'), dc = gel('connected-disconnect-btn');
     var eb = gel('connected-email-block'), np = gel('connected-newpass-form');
+    var cc = gel('connect-confirm'); if (cc) cc.hidden = true;
+    var sic = gel('signin-confirm'); if (sic) sic.hidden = true;
     if (np) np.hidden = !sbRecovery;
     if (eb) eb.hidden = !!sbUser && !sbRecovery;
     if (!status) return;
@@ -1446,13 +1452,85 @@
       renderAiAccess();
       initV11ModeLine();
     });
-    var si = gel('connected-signin-btn');
-    if (si) si.addEventListener('click', function () {
+    /* Pre-sign-in explainer (v18 B3, QA condition): Sign in also jumps
+     * to Google, so it explains first — with badge-only words (this
+     * jump does NOT read email; that is Connect, below). Embedded
+     * browsers get the v17 guidance instead of a dead-end jump. */
+    function showSigninConfirm() {
+      hideConnectConfirm();
+      var card = gel('signin-confirm');
+      if (!card) return; /* consent gate fails closed (v18 B3 QA) */
+      card.hidden = false;
+      var no = gel('signin-confirm-no');
+      if (no) { try { no.focus(); } catch (e) { /* focus is a help */ } }
+    }
+    function hideSigninConfirm() {
+      var card = gel('signin-confirm');
+      if (card) card.hidden = true;
+    }
+    function startGoogleSignin() {
       if (!sbClient) return;
       sbClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + window.location.pathname } });
+    }
+    var scYes = gel('signin-confirm-yes');
+    if (scYes) scYes.addEventListener('click', function () {
+      hideSigninConfirm();
+      startGoogleSignin();
+    });
+    var scNo = gel('signin-confirm-no');
+    if (scNo) scNo.addEventListener('click', function () {
+      hideSigninConfirm();
+      var msg = gel('connected-msg');
+      if (msg) msg.textContent = 'Okay — you are not signed in.';
+      var sib = gel('connected-signin-btn');
+      if (sib) { try { sib.focus(); } catch (e) { /* focus is a help */ } }
+    });
+    var si = gel('connected-signin-btn');
+    if (si) si.addEventListener('click', function () {
+      var msg = gel('connected-msg');
+      if (inEmbeddedBrowser()) {
+        if (msg) msg.textContent = 'Google blocks sign-in inside the Facebook/Instagram browser. Tap ⋮ → Open in Chrome, then sign in there.';
+        showCopyLinkButton();
+        return;
+      }
+      showSigninConfirm();
+    });
+    /* Pre-connect explainer (v18 B3): the Connect tap first shows the
+     * in-app #connect-confirm card (what access, that Google opens
+     * next). Only "Yes, open Google" runs startConnectedConnect();
+     * "Not now" connects nothing. Embedded browsers keep the v17
+     * guidance instead — there is no Google jump to explain there. */
+    function showConnectConfirm() {
+      hideSigninConfirm();
+      var card = gel('connect-confirm');
+      if (!card) return; /* consent gate fails closed (v18 B3 QA) */
+      card.hidden = false;
+      var no = gel('connect-confirm-no');
+      if (no) { try { no.focus(); } catch (e) { /* focus is a help */ } }
+    }
+    function hideConnectConfirm() {
+      var card = gel('connect-confirm');
+      if (card) card.hidden = true;
+    }
+    var ccYes = gel('connect-confirm-yes');
+    if (ccYes) ccYes.addEventListener('click', function () {
+      hideConnectConfirm();
+      startConnectedConnect();
+    });
+    var ccNo = gel('connect-confirm-no');
+    if (ccNo) ccNo.addEventListener('click', function () {
+      hideConnectConfirm();
+      var msg = gel('connected-msg');
+      if (msg) msg.textContent = 'Okay — nothing was connected.';
+      var cnb = gel('connected-connect-btn');
+      if (cnb) { try { cnb.focus(); } catch (e) { /* focus is a help */ } }
     });
     var cn = gel('connected-connect-btn');
     if (cn) cn.addEventListener('click', function () {
+      if (inEmbeddedBrowser()) { startConnectedConnect(); return; }
+      showConnectConfirm();
+    });
+    function startConnectedConnect() {
       var msg = gel('connected-msg');
       /* v17: Google blocks sign-in inside embedded in-app browsers —
        * never redirect there; route the user to a real browser. */
@@ -1494,7 +1572,7 @@
         }
         if (msg) msg.textContent = "Could not reach Rootling's server (network/CORS).";
       });
-    });
+    }
     /* Email + password sign-in, sign-up, and reset (v12). */
     function connMsg(text) { var m = gel('connected-msg'); if (m) m.textContent = text; }
     function connEmail() { var i = gel('connected-email-input'); return i ? i.value.trim() : ''; }
@@ -2864,7 +2942,16 @@
               species: state.species, personality: state.companionPersonality,
               identityLine: state.identityLine
             });
+            /* v18 (USER TEST #1): the person's check-ins, care days and
+             * sunshine carry into the new companion's state before save. */
+            if (window.RootlingCompanions.applyPersonState) window.RootlingCompanions.applyPersonState(state);
           }
+        }
+        /* v18 follow-up (QA finding): the person-state carry must run
+         * even when the pending note is missing — it is idempotent, so
+         * running it again after the pending path changes nothing. */
+        if (typeof window !== 'undefined' && window.RootlingCompanions && window.RootlingCompanions.applyPersonState) {
+          window.RootlingCompanions.applyPersonState(state);
         }
       } catch (e) { /* the adoption itself still stands */ }
       if (mergedProfile(state).calmDefault) {
@@ -3096,23 +3183,53 @@
       });
     }
 
-    els.resetBtn.addEventListener('click', function () {
-      var ok = true;
-      if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
-        ok = window.confirm('Start over with a brand-new companion? This clears the name, sunshine, check-ins and anything learned from this device.');
-      }
-      if (!ok) return;
-      state = defaultState();
-      saveState(state);
-      try {
-        if (typeof window !== 'undefined' && window.RootlingCompanions && window.RootlingCompanions.forgetLive) window.RootlingCompanions.forgetLive();
-      } catch (e) { /* the reset itself still stands */ }
-      celebrateUntil = 0;
-      groundingStep = -1;
-      activeGroundSteps = GROUNDING_STEPS;
-      els.petNameInput.value = '';
-      render();
-    });
+    /* Start over (v18 B2): the confirm is the in-app #reset-confirm
+     * card, never window.confirm — native dialogs are suppressed in
+     * some in-app browsers, so the old button looked dead there. The
+     * Yes tap runs the same reset as before, plus the person-progress
+     * scrub, so the clear the card promises is the clear that happens. */
+    if (els.resetBtn) {
+      els.resetBtn.addEventListener('click', function () {
+        var card = $('reset-confirm');
+        if (!card) return;
+        card.hidden = false;
+        var no = $('reset-confirm-no');
+        if (no && no.focus) { try { no.focus(); } catch (e) { /* focus is a help, never a need */ } }
+      });
+    }
+    var resetNo = $('reset-confirm-no');
+    if (resetNo) {
+      resetNo.addEventListener('click', function () {
+        var card = $('reset-confirm');
+        if (card) card.hidden = true;
+        if (els.resetBtn && els.resetBtn.focus) { try { els.resetBtn.focus(); } catch (e) { /* focus is a help, never a need */ } }
+      });
+    }
+    var resetYes = $('reset-confirm-yes');
+    if (resetYes) {
+      resetYes.addEventListener('click', function () {
+        var card = $('reset-confirm');
+        if (card) card.hidden = true;
+        state = defaultState();
+        saveState(state);
+        /* Each scrub gets its own try: one failing must not skip the
+         * others (QA hardening, v18 B2). */
+        try {
+          if (typeof window !== 'undefined' && window.RootlingCompanions && window.RootlingCompanions.beginStartOver) window.RootlingCompanions.beginStartOver();
+        } catch (e) { /* the reset itself still stands */ }
+        try {
+          if (typeof window !== 'undefined' && window.RootlingCompanions && window.RootlingCompanions.clearPersonProgress) window.RootlingCompanions.clearPersonProgress();
+        } catch (e) { /* the reset itself still stands */ }
+        try {
+          if (typeof window !== 'undefined' && window.RootlingCompanions && window.RootlingCompanions.forgetLive) window.RootlingCompanions.forgetLive();
+        } catch (e) { /* the reset itself still stands */ }
+        celebrateUntil = 0;
+        groundingStep = -1;
+        activeGroundSteps = GROUNDING_STEPS;
+        els.petNameInput.value = '';
+        render();
+      });
+    }
   }
 
   function init() {
@@ -3634,7 +3751,7 @@
       'rootling-persist-requested-v1', 'rootling-appearance-v1',
       'rootling-exec-v1', 'rootling-well-v1', 'rootling-social-v1',
       'rootling-time-v1', 'rootling-memorybook-v1', 'rootling-assistant-v1',
-      'rootling-assistant-secrets-v1', 'rootling-fitness-v1', 'rootling-mood-v1', 'rootling-pet-art-v1', 'rootling-playground-v1', CONSENT_KEY];
+      'rootling-assistant-secrets-v1', 'rootling-fitness-v1', 'rootling-mood-v1', 'rootling-pet-art-v1', 'rootling-playground-v1', 'rootling-person-state-v1', 'rootling-startover-pending-v1', CONSENT_KEY];
     var AREA_KEYS = [
       { key: 'rootling-exec-v1', label: 'Delete tasks and focus data' },
       { key: 'rootling-well-v1', label: 'Delete routines and wellbeing data' },
@@ -8216,7 +8333,16 @@
       return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
     }
     function dateOf(v) {
-      if (typeof v === 'string') { var m = v.match(/\d{4}-\d{2}-\d{2}/); return m ? m[0] : ''; }
+      if (typeof v === 'string') {
+        /* A full timestamp (it carries a 'T') names an instant, so its
+         * day label is the user's LOCAL day for that instant — never
+         * the date half of the string, which for an ISO stamp is the
+         * UTC day and can already be "tomorrow" late at night
+         * (USER TEST #9). A plain YYYY-MM-DD string is a day already:
+         * it is used as written. */
+        if (v.indexOf('T') !== -1) { var dt = new Date(v); return isNaN(dt.getTime()) ? '' : dayKey(dt); }
+        var m = v.match(/\d{4}-\d{2}-\d{2}/); return m ? m[0] : '';
+      }
       if (typeof v === 'number' && isFinite(v)) { var d = new Date(v); return isNaN(d.getTime()) ? '' : dayKey(d); }
       return '';
     }

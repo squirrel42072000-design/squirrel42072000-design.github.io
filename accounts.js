@@ -41,6 +41,8 @@
     'rootling-companions-v1',
     'rootling-vault-v1',
     'rootling-live-companion-v1',
+    'rootling-person-state-v1',
+    'rootling-startover-pending-v1',
     'rootling-pending-adopt-v1',
     /* v11/v12 stores join the account space: AI permissions, pet chat
      * and the connected flag are one person's, never shared across

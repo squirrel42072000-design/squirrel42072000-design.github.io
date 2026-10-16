@@ -1448,6 +1448,32 @@
         <button type="button" class="btn btn-ghost" id="connected-disconnect-btn" hidden>Disconnect &amp; delete connected data</button>
       </div>
       <p id="connected-msg" role="status"></p>
+      <!-- Pre-connect explainer (v18 B3): shown BEFORE any jump to
+           Google, in plain words — what access is asked for, and that
+           Google opens next. In-app card, never a native dialog. -->
+      <div id="connect-confirm" hidden>
+        <h4 id="connect-confirm-heading">Connect Gmail and Calendar?</h4>
+        <p class="q">Next, Google will open. Google will ask if you say yes.</p>
+        <p class="q">If you say yes, your pet can read your email and your calendar. It can only look — it cannot send email, and it cannot change your calendar.</p>
+        <p class="q">You can disconnect at any time. Nothing is shared until you say yes on Google's page.</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-primary" id="connect-confirm-yes">Yes, open Google</button>
+          <button type="button" class="btn btn-ghost" id="connect-confirm-no">Not now</button>
+        </div>
+      </div>
+      <!-- Pre-sign-in explainer (v18 B3, QA condition): the Sign in
+           button also jumps to Google, so it explains first too —
+           with its own true words: sign-in is only a name badge and
+           does NOT read email (unlike Connect above). -->
+      <div id="signin-confirm" hidden>
+        <h4 id="signin-confirm-heading">Sign in with Google?</h4>
+        <p class="q">Next, Google will open. Google will ask if you say yes.</p>
+        <p class="q">Signing in is only your name badge. It does not read your email. You can connect email later, only if you want to.</p>
+        <div class="choice-row">
+          <button type="button" class="btn btn-primary" id="signin-confirm-yes">Yes, open Google</button>
+          <button type="button" class="btn btn-ghost" id="signin-confirm-no">Not now</button>
+        </div>
+      </div>
       <!-- Email + password sign-in with a real reset flow (v12, Daniel's
            order: "Users need a password reset"). The reset link arrives
            by email and brings the user back here to pick a new password. -->
@@ -1750,6 +1776,18 @@
       </div>
       <button type="button" class="btn btn-ghost" id="privacy-footer-btn">Privacy &amp; your data</button>
       <button type="button" class="btn btn-ghost" id="reset-btn">Start over with a new companion</button>
+      <!-- Start-over confirm (v18 B2): an in-app card, never a native
+           dialog — window.confirm is suppressed in some in-app
+           browsers, which made this button look dead. The words say
+           exactly what goes and what stays. -->
+      <section class="card" id="reset-confirm" aria-labelledby="reset-confirm-heading" hidden>
+        <h3 id="reset-confirm-heading">Start over with a new companion?</h3>
+        <p class="q">Your companion will leave your collection. Your sunshine, check-ins, and what your companion learned on this device will be cleared.</p>
+        <p class="q">Your other companions stay in your collection, with their names and traits. Your account stays. There is no undo.</p>
+        <p class="q">You do not need to start over to take a break. Resting is always fine.</p>
+        <button type="button" class="btn btn-primary" id="reset-confirm-yes">Yes, start over</button>
+        <button type="button" class="btn btn-ghost" id="reset-confirm-no">Keep my companion</button>
+      </section>
     </footer>
   </div>
 
