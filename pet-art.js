@@ -365,14 +365,15 @@
   }
   function setSync(on) { index.syncOn = !!on; saveIndex(index); }
 
-  /* Sync lookup for setPetImage. Shows the user's drawing only when they
-   * chose "Use as my companion's picture" and it was drawn for this
-   * species (or for no species). Stage still shows through size. */
+  /* Sync lookup for setPetImage. Shows the user's drawing when they
+   * chose "Use as my companion's picture". v18 (USER TEST #7): the pick
+   * is the person's choice, so it stays on Home after adopting another
+   * companion — even one of a different kind — until the person picks
+   * a different picture or turns it off. Stage still shows through size. */
   function portraitSrc(species, stageId) {
     if (!index.asPortrait || !index.activeId) return '';
     var it = get(index.activeId);
     if (!it) return '';
-    if (it.species && species && it.species !== species) return '';
     return urls[it.id + ':full'] || '';
   }
   function thumbSrc(id) { return urls[id + ':thumb'] || ''; }
