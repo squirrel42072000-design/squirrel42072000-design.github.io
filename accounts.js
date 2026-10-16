@@ -55,7 +55,10 @@
     'rootling-mood-v1',
     /* v16: the pet drawings index (blobs live in IndexedDB under the
      * account id, see pet-art.js). */
-    'rootling-pet-art-v1'
+    'rootling-pet-art-v1',
+    /* Pet Playground saves + reward ledger (v17): one key holding a
+     * per-pet map, so account spaces keep every pet's games apart. */
+    'rootling-playground-v1'
   ];
 
   var store = null;
