@@ -9,3 +9,29 @@ jobs:
         with:
           node-version: '20'
       - run: node tools/check.js
+  channel-log:
+    # Every change must be logged in _agents/CHANNEL.md (see TEAM.md step 6).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require a channel entry for every change
+        env:
+          BASE_PR: ${{ github.event.pull_request.base.sha }}
+          HEAD_PR: ${{ github.event.pull_request.head.sha }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          if [ -n "$BASE_PR" ]; then RANGE="$BASE_PR...$HEAD_PR";
+          elif [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BEFORE" 2>/dev/null; then RANGE="$BEFORE..$AFTER";
+          else RANGE="$AFTER~1..$AFTER"; fi
+          CHANGED=$(git diff --name-only $RANGE)
+          echo "Changed files in $RANGE:"; echo "$CHANGED"
+          if [ -z "$CHANGED" ]; then exit 0; fi
+          if echo "$CHANGED" | grep -qx '_agents/CHANNEL.md'; then
+            echo "Channel entry found. Thanks for logging."
+          else
+            echo "::error file=_agents/CHANNEL.md::This change isn't logged. Add a message at the bottom of _agents/CHANNEL.md describing what you did (see the rules at the top of that file and TEAM.md step 6)."
+            exit 1
+          fi
