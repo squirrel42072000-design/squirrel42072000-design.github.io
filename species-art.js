@@ -1,102 +1,93 @@
-/* species-art.js — the picture matches the companion you chose (v14).
+/* species-art.js — painted companion portraits (v15).
  *
- * Before v14 every non-plant companion (pets, mythical creatures,
- * spirits, robots, aliens) shared one generic creature drawing, so a
- * user who adopted a Kraken saw a cub. This file draws the chosen
- * species for each stage (egg, nestling, cub, grown) and mood (happy,
- * sleepy, low, celebrate), in the same soft palette as the rest of the
- * art. A few species are hand-drawn; the rest use the species' own
- * emoji on a matching scene, so every species looks like itself.
+ * Daniel: "That's not the pet I chose" and then "recreate the pets
+ * images, but make them more artistic and detailed". Every species in the
+ * roster (pets, mythical, spirits, robots, aliens, and plants) has its own
+ * painted portrait in assets/pets/, all made in one storybook gouache
+ * style with the Rootling two-leaf sprout.
  *
- * API: RootlingSpeciesArt.src(species, stageId, mood) -> data: URL or ''
+ *   assets/pets/<slug>.webp      512px portrait
+ *   assets/pets/<slug>-egg.webp  egg stage: the baby peeking out of a shell
+ *   assets/pets/<slug>-sm.webp   192px thumbnail for pickers and the shelf
+ *
+ * Stage shows as size (small baby -> full grown, with a soft glow when
+ * grown). Mood shows as a gentle overlay (sleepy z's, a small cloud for low
+ * days, sparkles for celebrations). In calm mode the overlay never moves.
+ *
+ * API: RootlingSpeciesArt.src(species, stageId, mood) -> URL or ''
+ *      RootlingSpeciesArt.thumb(species) -> URL or ''
+ *      RootlingSpeciesArt.decorate(img, species, stageId, mood)
  *      RootlingSpeciesArt.speciesOf(state) -> species name or ''
- * No network. Returns '' for plants, so plant art is unchanged.
+ * No network beyond this site. Unknown species return '' so the old art
+ * stays as a fallback.
  */
 (function (root) {
   'use strict';
 
-  var INK = '#243324', BLUSH = '#FFB3BA', NOSE = '#FF8FA3';
-  var STAGE_SCALE = { egg: 0.62, nestling: 0.78, cub: 0.9, grown: 1 };
+  /* Painted species (slug = lowercase name, spaces -> _). Keep in step
+   * with assets/pets/ and the roster in companions.js. */
+  var PAINTED = ['dog', 'cat', 'rabbit', 'hamster', 'fox', 'owl', 'panda', 'wolf', 'tiger', 'red_panda', 'arctic_fox',
+    'dragon', 'phoenix', 'griffin', 'unicorn', 'kraken', 'fairy_dragon', 'pegasus', 'shadow_dragon',
+    'forest_spirit', 'guardian_spirit', 'water_spirit', 'fire_spirit', 'moon_spirit',
+    'assistant_bot', 'exploration_bot', 'learning_bot', 'builder_bot', 'research_bot',
+    'glow_slime', 'star_creature', 'cosmic_bloom', 'nebula_pet',
+    'bonsai', 'cactus', 'venus_flytrap', 'sunflower', 'oak_tree', 'cherry_blossom', 'bamboo', 'rose', 'orchid', 'lavender',
+    'mystic_tree', 'crystal_flower', 'moon_blossom', 'spirit_tree', 'fire_bloom'];
+  var PLANT_SLUGS = ['bonsai', 'cactus', 'venus_flytrap', 'sunflower', 'oak_tree', 'cherry_blossom', 'bamboo', 'rose', 'orchid', 'lavender', 'mystic_tree', 'crystal_flower', 'moon_blossom', 'spirit_tree', 'fire_bloom'];
+  var BASE = 'assets/pets/';
 
-  function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
-  function wrap(inner, label) {
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="' + esc(label) + '">' + inner + '</svg>';
-  }
-  function ground() { return '<ellipse cx="100" cy="174" rx="60" ry="10" fill="#E8DCC8"/><ellipse cx="100" cy="171" rx="46" ry="7" fill="#D9C7A5"/>'; }
-  function sparkles() {
-    return '<g fill="#F6C344"><path d="M34 46 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4z"/><path d="M164 40 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z"/></g>' +
-      '<circle cx="150" cy="70" r="4" fill="#6BCB77"/><circle cx="48" cy="84" r="3.5" fill="#FF8FA3"/><circle cx="170" cy="96" r="3" fill="#7EC8E3"/>';
-  }
-  function zzz() { return '<g fill="' + INK + '" opacity="0.55" font-family="sans-serif" font-weight="700"><text x="146" y="58" font-size="18">z</text><text x="160" y="42" font-size="13">z</text></g>'; }
-  function eyes(mood, lx, rx, y) {
-    if (mood === 'sleepy') return '<path d="M' + (lx - 6) + ' ' + y + ' Q' + lx + ' ' + (y + 5) + ' ' + (lx + 6) + ' ' + y + '" stroke="' + INK + '" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M' + (rx - 6) + ' ' + y + ' Q' + rx + ' ' + (y + 5) + ' ' + (rx + 6) + ' ' + y + '" stroke="' + INK + '" stroke-width="3" fill="none" stroke-linecap="round"/>';
-    if (mood === 'celebrate') return '<path d="M' + (lx - 6) + ' ' + (y + 2) + ' Q' + lx + ' ' + (y - 6) + ' ' + (lx + 6) + ' ' + (y + 2) + '" stroke="' + INK + '" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M' + (rx - 6) + ' ' + (y + 2) + ' Q' + rx + ' ' + (y - 6) + ' ' + (rx + 6) + ' ' + (y + 2) + '" stroke="' + INK + '" stroke-width="3" fill="none" stroke-linecap="round"/>';
-    return '<circle cx="' + lx + '" cy="' + y + '" r="5.5" fill="' + INK + '"/><circle cx="' + rx + '" cy="' + y + '" r="5.5" fill="' + INK + '"/><circle cx="' + (lx + 2) + '" cy="' + (y - 2) + '" r="1.8" fill="#fff"/><circle cx="' + (rx + 2) + '" cy="' + (y - 2) + '" r="1.8" fill="#fff"/>';
-  }
-  function mouth(mood, x, y) {
-    if (mood === 'low') return '<path d="M' + (x - 6) + ' ' + (y + 3) + ' Q' + x + ' ' + (y - 1) + ' ' + (x + 6) + ' ' + (y + 3) + '" stroke="' + INK + '" stroke-width="2.6" fill="none" stroke-linecap="round"/>';
-    if (mood === 'sleepy') return '<ellipse cx="' + x + '" cy="' + (y + 1) + '" rx="3" ry="2.4" fill="' + INK + '" opacity="0.7"/>';
-    if (mood === 'celebrate') return '<path d="M' + (x - 9) + ' ' + y + ' Q' + x + ' ' + (y + 12) + ' ' + (x + 9) + ' ' + y + ' Z" fill="' + INK + '"/><path d="M' + (x - 4) + ' ' + (y + 5) + ' Q' + x + ' ' + (y + 9) + ' ' + (x + 4) + ' ' + (y + 5) + '" fill="' + NOSE + '"/>';
-    return '<path d="M' + (x - 7) + ' ' + y + ' Q' + x + ' ' + (y + 7) + ' ' + (x + 7) + ' ' + y + '" stroke="' + INK + '" stroke-width="3" fill="none" stroke-linecap="round"/>';
-  }
-  function scaled(inner, s) {
-    if (s === 1) return inner;
-    var t = (1 - s) * 100; /* scale around (100, 172): feet stay on the ground */
-    return '<g transform="translate(' + t + ' ' + ((1 - s) * 172) + ') scale(' + s + ')">' + inner + '</g>';
-  }
+  /* Size by stage, as a share of the portrait frame. */
+  var SCALE = { egg: 1, nestling: 0.74, cub: 0.87, grown: 1, seed: 0.62, sprout: 0.74, bud: 0.87, bloom: 1 };
+  var GROWN = { grown: 1, bloom: 1 };
 
-  /* ---------------- hand-drawn: Kraken (deep-sea octopus) ---------------- */
-  function kraken(stage, mood) {
-    var body = '#9AD4E6', dark = '#4FA3C7', belly = '#D6F0F7', spot = '#7CC3DC';
-    var arm = function (d) { return '<path d="' + d + '" stroke="' + body + '" stroke-width="15" fill="none" stroke-linecap="round"/>'; };
-    var cups = function (pts) { return pts.map(function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="2.6" fill="' + belly + '"/>'; }).join(''); };
-    var arms = arm('M70 140 C52 150 40 160 46 170 C50 176 60 172 58 164') + arm('M84 146 C78 160 70 170 76 175') +
-      arm('M116 146 C122 160 130 170 124 175') + arm('M130 140 C148 150 160 160 154 170 C150 176 140 172 142 164') +
-      arm('M64 128 C44 126 30 134 30 146 C30 154 40 154 42 148') + arm('M136 128 C156 126 170 134 170 146 C170 154 160 154 158 148') +
-      cups([[50, 166], [78, 170], [122, 170], [150, 166], [34, 146], [166, 146]]);
-    var head = '<ellipse cx="100" cy="104" rx="48" ry="46" fill="' + body + '"/>' +
-      '<ellipse cx="100" cy="122" rx="30" ry="18" fill="' + belly + '" opacity="0.85"/>' +
-      '<circle cx="76" cy="76" r="6" fill="' + spot + '"/><circle cx="124" cy="72" r="4.5" fill="' + spot + '"/><circle cx="114" cy="86" r="3" fill="' + spot + '"/>' +
-      '<ellipse cx="82" cy="80" rx="13" ry="8" fill="#fff" opacity="0.35"/>' +
-      /* the Rootling leaf every companion wears */
-      '<path d="M100 60 C92 44 80 40 70 42 C74 56 86 62 100 60 Z" fill="#3E9B6B"/><path d="M100 60 C108 44 120 40 130 42 C126 56 114 62 100 60 Z" fill="#6BCB77"/>' +
-      '<circle cx="70" cy="114" r="7" fill="' + BLUSH + '" opacity="0.85"/><circle cx="130" cy="114" r="7" fill="' + BLUSH + '" opacity="0.85"/>' +
-      eyes(mood, 84, 116, 104) + mouth(mood, 100, 116);
-    if (stage === 'grown') head += '<path d="M78 58 l6 -12 8 9 8 -12 8 12 8 -9 6 12 z" fill="#F6C344" stroke="#D9A21E" stroke-width="2" stroke-linejoin="round"/>';
-    var bubbles = '<circle cx="158" cy="64" r="6" fill="none" stroke="' + dark + '" stroke-width="2" opacity="0.5"/><circle cx="168" cy="46" r="3.5" fill="none" stroke="' + dark + '" stroke-width="2" opacity="0.45"/>';
-    if (stage === 'egg') {
-      /* an egg with a little kraken peeking out of the crack */
-      var egg = '<ellipse cx="100" cy="112" rx="52" ry="62" fill="#EAF6FA" stroke="' + dark + '" stroke-width="3"/>' +
-        '<circle cx="80" cy="140" r="6" fill="' + spot + '" opacity="0.7"/><circle cx="122" cy="150" r="5" fill="' + spot + '" opacity="0.7"/>' +
-        '<path d="M52 104 L66 94 L78 106 L92 92 L106 106 L120 92 L134 106 L148 96" stroke="' + dark + '" stroke-width="3" fill="none" stroke-linejoin="round"/>' +
-        '<path d="M58 100 C64 66 136 66 142 100 L134 106 L120 92 L106 106 L92 92 L78 106 L66 94 Z" fill="' + body + '"/>' +
-        '<path d="M100 72 C94 60 86 58 78 60 C82 70 90 74 100 72 Z" fill="#3E9B6B"/><path d="M100 72 C106 60 114 58 122 60 C118 70 110 74 100 72 Z" fill="#6BCB77"/>' +
-        eyes(mood, 86, 114, 88) + '<path d="M44 150 C30 148 28 136 38 134" stroke="' + body + '" stroke-width="10" fill="none" stroke-linecap="round"/>';
-      return wrap(ground() + egg + bubbles + (mood === 'celebrate' ? sparkles() : '') + (mood === 'sleepy' ? zzz() : ''), 'Kraken egg');
+  function slugOf(species) { return String(species || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''); }
+  function has(species) { return PAINTED.indexOf(slugOf(species)) !== -1; }
+  function isPlant(species) { return PLANT_SLUGS.indexOf(slugOf(species)) !== -1; }
+
+  function src(species, stageId, mood) {
+    if (!has(species)) return '';
+    var s = slugOf(species);
+    if (stageId === 'egg' && !isPlant(species)) return BASE + s + '-egg.webp';
+    return BASE + s + '.webp';
+  }
+  function thumb(species) { return has(species) ? BASE + slugOf(species) + '-sm.webp' : ''; }
+
+  /* Gentle mood overlays. Plain SVG, no text, decorative only. */
+  var FX = {
+    sleepy: '<svg viewBox="0 0 60 60" class="fx-z" aria-hidden="true"><text x="8" y="44" font-size="20" font-weight="700" fill="#5b6f86" font-family="sans-serif">z</text><text x="26" y="30" font-size="15" font-weight="700" fill="#7c8ea3" font-family="sans-serif">z</text><text x="40" y="18" font-size="11" font-weight="700" fill="#9aabbd" font-family="sans-serif">z</text></svg>',
+    low: '<svg viewBox="0 0 70 50" class="fx-cloud" aria-hidden="true"><path d="M18 34 C6 34 6 20 17 19 C18 9 33 7 37 15 C42 8 56 11 55 22 C64 23 64 34 54 34 Z" fill="#e7edf3" stroke="#b8c6d4" stroke-width="2"/><path d="M28 39 q-2 5 0 7 q2 -2 0 -7z" fill="#9fc3e0"/><path d="M42 40 q-2 4 0 6 q2 -2 0 -6z" fill="#9fc3e0"/></svg>',
+    celebrate: '<svg viewBox="0 0 200 200" class="fx-sparkle" aria-hidden="true"><g fill="#F6C344"><path d="M30 40 l5 12 12 5 -12 5 -5 12 -5 -12 -12 -5 12 -5z"/><path d="M168 34 l4 9 9 4 -9 4 -4 9 -4 -9 -9 -4 9 -4z"/><path d="M174 132 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z"/></g><circle cx="150" cy="70" r="4" fill="#6BCB77"/><circle cx="44" cy="120" r="4" fill="#FF8FA3"/><circle cx="160" cy="100" r="3" fill="#7EC8E3"/><circle cx="60" cy="168" r="3" fill="#F6C344"/></svg>',
+    happy: '<svg viewBox="0 0 60 60" class="fx-heart" aria-hidden="true"><path d="M30 50 C10 36 6 24 14 17 C20 12 27 15 30 21 C33 15 40 12 46 17 C54 24 50 36 30 50 Z" fill="#FF9FB1" stroke="#f07d95" stroke-width="2"/></svg>'
+  };
+
+  function decorate(img, species, stageId, mood) {
+    if (!img) return;
+    var on = has(species);
+    img.classList.toggle('has-art', on);
+    var wrap = img.parentNode;
+    var fx = wrap && wrap.querySelector ? wrap.querySelector('.pet-fx') : null;
+    if (!on) {
+      img.style.removeProperty('--art-scale');
+      img.removeAttribute('data-art-mood');
+      if (wrap && wrap.classList) wrap.classList.remove('art-grown');
+      if (fx) fx.innerHTML = '';
+      return;
     }
-    var inner = arms + head;
-    return wrap(ground() + scaled(inner, STAGE_SCALE[stage] || 1) + bubbles + (mood === 'celebrate' ? sparkles() : '') + (mood === 'sleepy' ? zzz() : ''), 'Kraken companion');
-  }
-
-  var HAND = { Kraken: kraken };
-
-  /* ---------------- every other species: its own emoji on a scene ---------------- */
-  var SCENE = { pets: ['#CDEAC0', '#3E9B6B'], mythical: ['#E4D7F5', '#8B6CC4'], spirits: ['#DFF3EA', '#4FAF8F'], robots: ['#DDE6EE', '#6C8597'], aliens: ['#E6F7D9', '#7BBF4A'] };
-  function emojiArt(entry, cat, stage, mood) {
-    var sc = SCENE[cat] || SCENE.pets, s = STAGE_SCALE[stage] || 1;
-    var glow = '<circle cx="100" cy="104" r="62" fill="' + sc[0] + '"/><circle cx="100" cy="104" r="62" fill="none" stroke="' + sc[1] + '" stroke-width="3" opacity="0.35"/>';
-    var size = Math.round(96 * s);
-    var body;
-    if (stage === 'egg') {
-      body = '<ellipse cx="100" cy="114" rx="50" ry="60" fill="#FFF9EE" stroke="' + sc[1] + '" stroke-width="3"/>' +
-        '<path d="M52 108 L66 98 L78 110 L92 96 L106 110 L120 96 L134 110 L148 100" stroke="' + sc[1] + '" stroke-width="3" fill="none" stroke-linejoin="round"/>' +
-        '<text x="100" y="100" font-size="58" text-anchor="middle" dominant-baseline="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">' + entry.emoji + '</text>';
-    } else {
-      body = glow + '<text x="100" y="' + (110 + (1 - s) * 30) + '" font-size="' + size + '" text-anchor="middle" dominant-baseline="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">' + entry.emoji + '</text>' +
-        '<path d="M100 ' + (54 + (1 - s) * 40) + ' C92 ' + (40 + (1 - s) * 40) + ' 80 ' + (36 + (1 - s) * 40) + ' 72 ' + (38 + (1 - s) * 40) + ' C76 ' + (50 + (1 - s) * 40) + ' 88 ' + (56 + (1 - s) * 40) + ' 100 ' + (54 + (1 - s) * 40) + ' Z" fill="#6BCB77"/>';
-      if (stage === 'grown') body += '<path d="M80 ' + 44 + ' l6 -12 8 9 6 -12 6 12 8 -9 6 12 z" fill="#F6C344" stroke="#D9A21E" stroke-width="2" stroke-linejoin="round" transform="translate(0 -6)"/>';
+    var m = (mood === 'stage' || !mood) ? '' : mood;
+    img.style.setProperty('--art-scale', String(SCALE[stageId] || 1));
+    img.setAttribute('data-art-mood', m || 'stage');
+    img.alt = 'Your ' + species + ' companion' + (stageId ? ', ' + stageId + ' stage' : '') + (m ? ', ' + ({ low: 'feeling a bit low', celebrate: 'celebrating', sleepy: 'feeling sleepy', happy: 'feeling happy' }[m] || 'feeling ' + m) : '');
+    if (wrap && wrap.classList) {
+      wrap.classList.add('pet-art-wrap');
+      wrap.classList.toggle('art-grown', !!GROWN[stageId]);
+      if (!fx) { fx = document.createElement('span'); fx.className = 'pet-fx'; fx.setAttribute('aria-hidden', 'true'); wrap.appendChild(fx); }
+      fx.className = 'pet-fx' + (m ? ' fx-' + m : '');
+      fx.innerHTML = FX[m] || '';
     }
-    return wrap(ground() + body + (mood === 'celebrate' ? sparkles() : '') + (mood === 'sleepy' ? zzz() : ''), entry.name + ' companion');
+    /* The painted portrait already shows the species, so the small
+     * species badge is no longer needed on Home. */
+    var badge = document.getElementById('pet-species-badge');
+    if (badge && img.id === 'pet-img') badge.hidden = true;
   }
 
   function findEntry(species) {
@@ -121,18 +112,8 @@
     } catch (e) { /* fine */ }
     return '';
   }
-  var cache = {};
-  function src(species, stageId, mood) {
-    var f = findEntry(species);
-    if (!f || f.cat === 'plants') return '';
-    var m = (mood === 'stage' || !mood) ? 'happy' : mood;
-    var k = species + '|' + stageId + '|' + m;
-    if (cache[k]) return cache[k];
-    var svg = HAND[species] ? HAND[species](stageId, m) : emojiArt(f.entry, f.cat, stageId, m);
-    return (cache[k] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
-  }
 
-  var api = { src: src, speciesOf: speciesOf, hand: Object.keys(HAND) };
+  var api = { src: src, thumb: thumb, decorate: decorate, speciesOf: speciesOf, has: has, slugOf: slugOf, painted: PAINTED.slice(), findEntry: findEntry };
   root.RootlingSpeciesArt = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

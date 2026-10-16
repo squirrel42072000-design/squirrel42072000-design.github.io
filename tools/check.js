@@ -35,7 +35,7 @@ const REQUIRED_SCRIPTS = ['accounts.js', 'app.js', 'species-art.js', 'config.js'
 REQUIRED_SCRIPTS.forEach(s => { if (scripts.indexOf(s) === -1) fail(`index.html no longer loads ${s}`); });
 const order = (a, b) => scripts.indexOf(a) < scripts.indexOf(b);
 if (!order('accounts.js', 'app.js')) fail('accounts.js must load before app.js');
-if (!order('companions.js', 'species-art.js') || !order('species-art.js', 'app.js')) fail('species-art.js must load after companions.js and before app.js');
+if (!order('species-art.js', 'companions.js') || !order('species-art.js', 'app.js')) fail('species-art.js must load before companions.js and app.js (painted portraits, v15)');
 if (!order('research.js', 'assistant.js') || !order('mood.js', 'assistant.js') || !order('fitness.js', 'assistant.js')) fail('research.js, fitness.js, mood.js must load before assistant.js');
 const sw = read('sw.js');
 const ver = (sw.match(/CACHE_VERSION = 'rootling-v(\d+)'/) || [])[1];
@@ -52,8 +52,19 @@ STORE_KEYS.forEach(k => { if (acc.indexOf(`'${k}'`) === -1) fail(`accounts.js AP
 });
 ['ask-card', 'fit-card', 'mood-card'].forEach(id => { if (app.indexOf(`'${id}': 'home'`) === -1) fail(`app.js VIEW_OF_ID is missing '${id}': 'home'`); });
 if (app.indexOf('RootlingSpeciesArt') === -1) fail('app.js no longer uses species-art.js (pets would show generic art again)');
-if (app.indexOf('buildSupportPicker(') === -1) fail('app.js: support styles must stay multi-select (Daniel, v14)');
-if (app.indexOf('id = \'view-back-bar\'') === -1 && app.indexOf("bar.id = 'view-back-bar'") === -1) fail('app.js: page Back bar is gone (Daniel, v14)');
+if (app.indexOf('buildSupportPicker(') === -1 && app.indexOf('readProfileGroup(') === -1) fail('app.js: support styles must stay multi-select (Daniel, v14)');
+if (app.indexOf('view-back-bar') === -1) fail('app.js: page Back bar is gone (Daniel, v14)');
+/* v15: every painted species has its portrait, thumbnail and (animals) egg. */
+{
+  const SA = require(path.join(R, 'species-art.js'));
+  const dir = path.join(R, 'assets', 'pets');
+  SA.painted.forEach(slug => {
+    ['', '-sm'].forEach(sfx => { if (!fs.existsSync(path.join(dir, `${slug}${sfx}.webp`))) fail(`assets/pets/${slug}${sfx}.webp is missing`); });
+  });
+  if (!SA.src('Kraken', 'egg', 'stage').endsWith('kraken-egg.webp')) fail('species-art.js: Kraken egg art path is wrong');
+  SA.painted.forEach(slug => { const u = SA.src(slug, 'egg', 'stage'); if (/-egg\.webp$/.test(u) && !fs.existsSync(path.join(R, u))) fail(`${u} is missing`); });
+  ok(`${SA.painted.length} painted species`);
+}
 if (app.indexOf('addExperience: function') === -1) fail('app.js: RootlingApp.addExperience is gone (pet growth from abilities depends on it)');
 
 /* 5. Guardrails. */

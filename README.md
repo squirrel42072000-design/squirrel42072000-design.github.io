@@ -40,3 +40,10 @@ Your pet is now a helper you can type or talk to, right on Home.
 - **Grows and adapts (on this device):** a Helper level that rises as you work together; it learns which helps you say helped (and leads with those), what you ask for at this time of day (and offers it), your own words ("When I say inbox, I mean check my email"), and whether you like short or longer answers. Ask "What have you learned?" to see it all in plain words, or wipe it.
 - **Optional connected helpers (off by default, in Settings):** read-only Gmail + Google Calendar with your own Google Client ID (token kept in memory only), and a smarter AI brain using your own OpenAI-compatible or Anthropic key for open questions, grounded in the research notes and the same guardrails. Keys are stored only on this device and left out of backups.
 - **Safety:** crisis words always go to 988 and the Support page first.
+
+
+## v15 — painted pets (Computer)
+- Every companion (48 species: pets, mythical creatures, spirits, robots, alien lifeforms, plants) has its own detailed storybook painting.
+- Animals hatch from a painted eggshell, then grow in size through nestling and cub to grown (soft gold glow). Plants grow from seed to bloom.
+- Moods show as gentle overlays (sleepy z's, a small cloud on low days, sparkles to celebrate). Calm mode and reduced motion keep them still.
+- The adoption grid and companion shelf show the paintings too.

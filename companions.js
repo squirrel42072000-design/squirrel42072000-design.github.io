@@ -536,7 +536,7 @@
         ' data-species="' + esc(s.name) + '" role="radio" aria-checked="' +
         (pending.species === s.name ? 'true' : 'false') + '"' +
         (s.premium ? ' disabled aria-disabled="true"' : '') + '>' +
-        '<span class="pick-emoji" aria-hidden="true">' + s.emoji + '</span>' +
+        speciesPic(s.name, s.emoji) +
         '<span class="pick-name">' + esc(s.name) + '</span>' +
         (sub ? '<span class="pick-sub">' + esc(sub) + '</span>' : '') +
         (s.premium ? '<span class="pick-ribbon">Premium</span>' : '') +
@@ -643,6 +643,13 @@
     var st = parseJson(raw);
     return (st && typeof st.sunshine === 'number') ? st.sunshine : 0;
   }
+  /* v15: the painted portrait when there is one, else the emoji. */
+  function speciesPic(name, emoji) {
+    var SA = (typeof window !== 'undefined') ? window.RootlingSpeciesArt : null;
+    var t = SA ? SA.thumb(name) : '';
+    if (t) return '<img class="pick-art" src="' + t + '" alt="" width="72" height="72" loading="lazy" decoding="async">';
+    return '<span class="pick-emoji" aria-hidden="true">' + emoji + '</span>';
+  }
   function speciesEmoji(entry) {
     var s = speciesEntry(entry.category, entry.species);
     if (s) return s.emoji;
@@ -670,7 +677,7 @@
       actions += '<button type="button" class="btn btn-soft" data-shelf-rename="' + c.id + '">Rename</button>';
       if (c.isMain) actions += '<button type="button" class="btn btn-soft" data-shelf-newmain="1">Choose a new main companion</button>';
       return '<div class="shelf-card">' +
-        '<span class="pick-emoji" aria-hidden="true">' + speciesEmoji(c) + '</span>' +
+        speciesPic(c.species, speciesEmoji(c)) +
         '<div class="shelf-words">' +
         '<strong>' + esc(c.name) + '</strong> — ' + esc(c.species) + ' · ' + p.emoji + ' ' + esc(p.name) + '<br>' +
         '<span class="gentle small">Level ' + st.level + ' · ' + esc(st.name) + ' stage</span><br>' +

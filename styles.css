@@ -585,3 +585,23 @@ form.ask-form:not(#ask-form){flex-direction:column}
 .profile-picker { border: none; padding: 0; margin: 0 0 0.6rem; }
 .profile-picker legend { font-weight: 700; margin-bottom: 0.4rem; }
 #adopt-profile-group .check-row, #profile-group .check-row { margin: 0.35rem 0; }
+
+/* ---------- v15: painted species portraits (species-art.js) ---------- */
+.pet-stage-wrap{position:relative}
+.pet-img.has-art{width:calc(190px * var(--art-scale,1));height:calc(190px * var(--art-scale,1));transition:width .4s ease,height .4s ease;filter:drop-shadow(0 4px 6px rgba(60,50,30,.12))}
+.pet-img.has-art[data-art-mood="sleepy"]{filter:saturate(.85) brightness(.97) drop-shadow(0 4px 6px rgba(60,50,30,.12))}
+.pet-img.has-art[data-art-mood="low"]{filter:saturate(.8) drop-shadow(0 4px 6px rgba(60,50,30,.12))}
+.pet-stage-wrap.art-grown{box-shadow:0 0 0 4px rgba(246,195,68,.35),0 0 22px rgba(246,195,68,.35)}
+.pet-fx{position:absolute;inset:0;pointer-events:none}
+.pet-fx svg{position:absolute}
+.pet-fx .fx-z{width:46px;height:46px;top:6px;right:8px;animation:fxFloat 3s ease-in-out infinite}
+.pet-fx .fx-cloud{width:58px;height:42px;top:4px;right:2px;animation:fxFloat 4s ease-in-out infinite}
+.pet-fx .fx-heart{width:26px;height:26px;top:14px;right:18px;animation:fxFloat 2.6s ease-in-out infinite}
+.pet-fx .fx-sparkle{width:100%;height:100%;top:0;left:0;animation:fxTwinkle 1.6s ease-in-out infinite}
+@keyframes fxFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes fxTwinkle{0%,100%{opacity:1}50%{opacity:.55}}
+body.calm .pet-fx svg,body.well-still .pet-fx svg{animation:none !important}
+@media (prefers-reduced-motion:reduce){.pet-fx svg{animation:none}.pet-img.has-art{transition:none}}
+@media (min-width:640px){.pet-img.has-art{width:calc(218px * var(--art-scale,1));height:calc(218px * var(--art-scale,1))}}
+.pick-art{width:72px;height:72px;object-fit:contain;display:block;margin:0 auto}
+.shelf-card .pick-art{width:64px;height:64px;flex:0 0 64px}

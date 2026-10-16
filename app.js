@@ -2382,6 +2382,12 @@
     var img = els.petImg;
     var stage = stageFor(state.sunshine, state.form);
     var primary = mood === 'stage' ? stage.file : moodFile(state, mood);
+    /* v15: painted species portrait (species-art.js) leads when the
+     * chosen species has one; the stage/mood SVGs stay as the fallback. */
+    var SA = window.RootlingSpeciesArt, sp = SA ? SA.speciesOf(state) : '';
+    var art = SA ? SA.src(sp, stage.id, mood) : '';
+    if (art) primary = art;
+    if (SA) SA.decorate(img, art ? sp : '', stage.id, mood);
     img.onerror = function () {
       if (img.src.indexOf(stage.file) === -1 && primary !== stage.file) {
         img.src = stage.file;
@@ -2650,7 +2656,10 @@
     var mode = state.pauseScreen || 'blank';
     if (els.quietArt) {
       els.quietArt.hidden = mode !== 'companion';
-      if (mode === 'companion') els.quietArt.src = (FORMS[state.form] || FORMS.plant).moods.sleepy;
+      if (mode === 'companion') {
+        var SAq = window.RootlingSpeciesArt, spq = SAq ? SAq.speciesOf(state) : '';
+        els.quietArt.src = (SAq && SAq.src(spq, stageFor(state.sunshine, state.form).id, 'sleepy')) || (FORMS[state.form] || FORMS.plant).moods.sleepy;
+      }
     }
     if (els.quietColour) els.quietColour.hidden = mode !== 'colour';
     if (els.quietView) els.quietView.hidden = false;
@@ -7174,7 +7183,9 @@
       if (img) {
         var src = 'assets/sprout-celebrate.svg';
         try {
-          if (st && st.form === 'animal') src = 'assets/creature-celebrate.svg';
+          var SAc = window.RootlingSpeciesArt, spc = SAc ? SAc.speciesOf(st) : '';
+          if (SAc && SAc.has(spc)) src = SAc.src(spc, 'grown', 'celebrate');
+          else if (st && st.form === 'animal') src = 'assets/creature-celebrate.svg';
           else if (st && st.calmMode) src = 'assets/sprout-celebrate-calm.svg';
         } catch (e) { /* keep the plant art */ }
         img.setAttribute('src', src);

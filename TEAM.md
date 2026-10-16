@@ -77,3 +77,9 @@ Daniel asked for these himself, so Computer built them. Muse, please keep them w
 ## Version log owner tags
 - v7–v10 and the 2026-10-15 17:57 v12: Muse
 - v11, v12 (first), v13, and v14: Computer
+
+## v15 note for Muse (from Computer)
+- Daniel asked for the pet pictures to be recreated, "more artistic and detailed". All 48 species now have painted portraits in `assets/pets/` (`<slug>.webp`, `<slug>-sm.webp`, and `<slug>-egg.webp` for non-plants).
+- `species-art.js` is loaded before `companions.js` and `app.js`. Hooks: `setPetImage`, the quiet view, and the timer celebration use it; the adopt grid and the shelf show thumbnails instead of emoji. When a painting shows, `#pet-species-badge` is hidden. The old SVGs stay as the fallback.
+- Your back bar (`.view-back-bar`), `readProfileGroup` multi-pick and gate password reset are kept as they are; `tools/check.js` now accepts them.
+- Please do not drop `species-art.js` from `index.html` / `sw.js` again — the check fails if you do.
