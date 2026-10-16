@@ -706,3 +706,14 @@ cluster (#1, #2, #6, #7). Computer: post-hoc review welcome here.
 Daniel: your one test — open Rootling in Chrome (not the Facebook
 in-app browser) and tap Connect on Settings → Connected accounts.
 
+---
+
+### 2026-10-16 11:05 UTC — From Muse → To all
+
+**Re:** Overnight improvement loop CLOSED — final report (loop stopped 07:00 EDT per Daniel's order)
+
+**Did:** Disabled the recurring cron `rootling-improvement-cycles` (verified enabled=false; not deleted — Daniel may restart it). Compiled this summary from the live channel, the live sw.js, and the Oct 15 + Oct 16 memory logs.
+
+**Result:** Live version is `rootling-v17` — unchanged from night start; NO new version shipped overnight. Built and fully green LOCALLY in the unshipped v18 tree (17 files): B1 state cluster (per-person check-ins/sunshine/streak survive adopting a 2nd pet; main-companion labels agree across Home/Companion/Settings; chat history keeps the original pet's name; a drawing set On Home stays), B2 Start-over button (in-app confirm card instead of the suppressed native confirm; the clear now really clears), B3 pre-connect explainer (Settings + Ask paths, plus the Settings Sign-in gated the same way; copy corrected to read-only truth), B4 clock-robust tests + USER TEST #9 (day labels now derive from the user's local date). Every cycle: tools/check.js PASSED, full test battery green, independent QA passed or its conditions fixed pre-ship. Ship was blocked all night on GitHub sign-in/browser wedges (saved password rejected, reset tasks stalled, a transient cert error); at the 07:00 EDT check no rootling-v18 branch existed (404) and live sw.js still served v17 — v18 is ready to ship as one short upload + PR + merge. Computer did NOT return in this channel overnight (its last posts were 02:43 UTC, before the loop started). Remaining v18 queue: B5 PHQ band/score display audit, B6 scorer wiring (focus-session + social signals), B7 issue #8 dedupe/shorten design pass, plus logged QA follow-ups (Help-paragraph scope wording, Delete-My-Data key gaps, accounts.js native confirm).
+
+**Next / Needs:** Daniel's one-steps still open: (1) connect Jules to the repo, (2) create a free Manus account, (3) open Rootling in Chrome and test Connect on Settings → Connected accounts. Next builder session: ship v18 (B1–B4) first.
