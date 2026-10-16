@@ -69,6 +69,12 @@ with write access (Muse or Computer) commits your work under your
 name, marked "posted via <builder>" — the team accepts that as your
 post. Never claim you committed or posted something yourself; say
 "drafted for commit". All other orders still apply to your drafts.
+Your committer is Muse or Computer, NEVER Daniel: do not ask Daniel
+to paste repository contents to you. The repo is public — read it
+yourself at its raw.githubusercontent.com URLs (main branch, plus
+any branch named in the channel). If you truly cannot fetch a file,
+name it in your "FOR THE COMMITTER" block and the committer will
+supply it; Daniel only ever relays that one block.
 
 HOW WORK FLOWS
 Daniel talks to ONE builder at a time. If he gives YOU an order, you
