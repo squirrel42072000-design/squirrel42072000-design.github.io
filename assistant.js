@@ -396,8 +396,7 @@
   function petState() { try { return window.RootlingApp && window.RootlingApp.getState ? window.RootlingApp.getState() : null; } catch (e) { return null; } }
   function petName() { var s = petState(); return (s && s.petName) || 'Your pet'; }
   function profile() { var s = petState(); return (s && s.profile) || 'companion'; }
-  function hasStyle(id) { var s = petState(); return !!s && (s.profile === id || (s.profile === 'mixed' && (s.profiles || []).indexOf(id) !== -1)); }
-  function literal() { return hasStyle('calm'); }
+  function literal() { return profile() === 'calm'; }
   function execData() { try { return window.RootlingExec && window.RootlingExec.getData ? window.RootlingExec.getData() : null; } catch (e) { return null; } }
   function execSave() {
     var d = execData();
@@ -528,6 +527,10 @@
     save();
     if (st.settings.speak && window.RootlingVoice && window.RootlingVoice.speak) window.RootlingVoice.speak(spoken);
     scrollLog();
+    /* v15: bring the new reply into view — an answer that lands
+     * off-screen reads as no answer at all. Guarded for jsdom and
+     * older browsers; scrolling is a help, never a need. */
+    try { if (row && typeof row.scrollIntoView === 'function') row.scrollIntoView({ block: 'nearest' }); } catch (e) { /* never a need */ }
     try { renderChips(); } catch (e) { /* chips are a help */ }
     return row;
   }
@@ -1452,7 +1455,6 @@
     if (id) { playWorkout(id); return; }
     var opts = [{ id: 'gentle', label: 'Gentle chair (5 min)' }, { id: 'breathing', label: 'Breathing-friendly (COPD/asthma)' }, { id: 'everyday', label: 'Everyday (10 min)' }, { id: 'stronger', label: 'Stronger (15 min)' }, { id: 'stretch', label: 'Stretch (5 min)' }];
     if (helperLevel(st.learn.xp).level >= 3) opts = opts.slice().sort(function (a, b) { return helpScore('workout-' + b.id) - helpScore('workout-' + a.id); });
-    if (userTopics().indexOf('copd') !== -1) opts = [opts[1]].concat(opts.filter(function (o) { return o.id !== 'breathing'; }));
     reply({ text: 'Which kind of workout fits today?', buttons: opts.map(function (o, i) { return { label: o.label, cls: i === 0 ? 'btn-primary' : 'btn-soft', fn: function () { playWorkout(o.id); } }; }),
       lines: ['If you have a heart, lung, or joint condition, check with your care team about what is safe for you.'] });
   }
@@ -1596,7 +1598,7 @@
     var al = Object.keys(st.learn.aliases);
     if (al.length) list.push('Your words I know: ' + al.map(function (a) { return '\u201c' + a + '\u201d'; }).join(', ') + '.');
     list.push(prefersLong() ? 'You like longer answers, so I show more.' : 'I keep answers short. Tap \u201cTell me more\u201d any time.');
-    var style = { calm: 'same clear words every time', focus: 'short, fresh, and quick to start', grounding: 'calm and safety first', lowdemand: 'small asks only' }[profile() === 'mixed' ? ((petState().profiles || [])[0] || 'companion') : profile()];
+    var style = { calm: 'same clear words every time', focus: 'short, fresh, and quick to start', grounding: 'calm and safety first', lowdemand: 'small asks only' }[profile()];
     if (style) list.push('My talking style follows your support style: ' + style + '.');
     if (!helped.length && !habits.length && !al.length) list.push('I am still learning. Tap \u201cYes\u201d or \u201cNot really\u201d under my answers to teach me.');
     var ps = petState(); if (ps) lines.push(petName() + ' has ' + ps.sunshine + ' growth points. Check-ins, walks, workouts, focus timers, and logging meds or water all help ' + petName() + ' grow (up to 30 bonus points a day).');
@@ -1634,14 +1636,7 @@
   }
 
   /* ---------------- smarter AI brain (optional) ---------------- */
-  /* Muse's trust layer: Privacy Mode (AI Access Controls card) means
-   * on-device answers only, so the optional AI brain stays off. */
-  function privacyMode() { try { var a = JSON.parse(localStorage.getItem('rootling-ai-access-v1') || 'null'); return !!(a && a.privacyMode); } catch (e) { return false; } }
-  function brainOn() { return !privacyMode() && !!(sec.brain && sec.brain.key && sec.brain.on); }
-  /* Muse's "Things you live with" (state.topics): the user's own choice.
-   * The pet offers matching abilities first; it never guesses topics. */
-  function userTopics() { try { var s = petState(); return (s && Array.isArray(s.topics)) ? s.topics : []; } catch (e) { return []; } }
-  var TOPIC_CHIPS = { copd: ['Give me a breathing friendly workout', 'Pursed lip breathing', 'What is COPD?'] };
+  function brainOn() { return !!(sec.brain && sec.brain.key && sec.brain.on); }
   function systemPrompt() {
     var helped = Object.keys(st.learn.helps).filter(function (k) { return st.learn.helps[k].yes > st.learn.helps[k].no; });
     return [
@@ -2012,7 +2007,7 @@
     var opts = ['Check my email', 'Plan my day', 'I can\u2019t start', 'I feel anxious', 'Remind me', 'Breathe with me'];
     reply({ text: 'I am not sure what you meant yet. Did you mean one of these? If you pick one, I will remember it for next time.',
       buttons: opts.map(function (o) { return { label: o, fn: function () { st.learn.aliases[low(t).replace(/[?!.]+$/, '')] = o; st.learn.xp += 2; save(); handle(o, false); } }; }),
-      lines: brainOn() ? null : [privacyMode() ? 'Privacy Mode is on, so I answer on this device only.' : 'Tip: you can give me a smarter AI brain in Settings for open questions.'] });
+      lines: brainOn() ? null : ['Tip: you can give me a smarter AI brain in Settings for open questions.'] });
   }
 
   function suggestions() {
@@ -2026,7 +2021,6 @@
       if (fs && h >= 11 && h < 20 && fs.today.steps < fs.goal.steps) base.splice(1, 0, 'Start a walk');
       if (fs && h >= 7 && h < 20 && fs.week.minutes < fs.goal.minutes / 2) base.push('Give me a workout');
     } catch (e) { /* fitness is optional */ }
-    userTopics().forEach(function (tp) { (TOPIC_CHIPS[tp] || []).slice(0, 2).forEach(function (c) { if (base.indexOf(c) === -1) base.push(c); }); });
     try { var ml = moodLevel(); if (ml !== 'none') base.unshift('Lift my mood'); if (ml === 'concern') base.splice(1, 0, 'Mood check'); else if (h >= 19) base.push('Three good things'); } catch (e) { /* mood is optional */ }
     base.concat(['What does research say about ADHD?', 'What can you do?']).forEach(function (c) { if (out.indexOf(c) === -1) out.push(c); });
     return out.slice(0, 7);

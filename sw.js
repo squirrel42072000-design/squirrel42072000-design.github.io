@@ -13,7 +13,6 @@ var APP_SHELL = [
   './index.html',
   './styles.css',
   './accounts.js',
-  './species-art.js',
   './companions.js',
   './traits.js',
   './burnoutEngine.js',

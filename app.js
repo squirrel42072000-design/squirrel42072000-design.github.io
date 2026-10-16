@@ -1015,6 +1015,18 @@
     loadChat().messages.push({ role: role, text: text, at: Date.now() });
     saveChat();
     renderChat();
+    /* v15: a reply you cannot see reads as a dead app — bring the
+     * newest line into view after every send. Guarded: jsdom and
+     * older browsers may lack scrollIntoView; scrolling is a help,
+     * never a need, so any failure is silent. */
+    try {
+      var log = gel('chat-log');
+      if (log) {
+        log.scrollTop = log.scrollHeight;
+        var last = log.lastElementChild;
+        if (last && typeof last.scrollIntoView === 'function') last.scrollIntoView({ block: 'nearest' });
+      }
+    } catch (e) { /* scrolling is a help, never a need */ }
   }
   function chatFacts() {
     var facts = execFacts();
@@ -1212,12 +1224,7 @@
       if (!jwt) throw new Error('no session');
       return fetch(SUPABASE_URL + '/functions/v1/' + name, {
         method: 'POST',
-        /* No 'apikey' header: the functions' CORS rules allow only
-         * authorization + content-type, so sending apikey made the
-         * browser's preflight fail and every call (connect, scan, chat,
-         * disconnect) died before reaching the backend. The user's JWT
-         * in Authorization is all the gateway needs. */
-        headers: { 'Authorization': 'Bearer ' + jwt, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': 'Bearer ' + jwt, 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify(body || {})
       });
     });
@@ -1320,6 +1327,41 @@
       .catch(function () { return null; });
   }
 
+  /* Ask Memory submit (v15 hardening): the binding used to live inline
+   * inside initV11(), AFTER renderAiAccess/renderChat/initConnected/
+   * initV12 — if any of those throws in a real browser (a live v14
+   * tap-through saw exactly this: the form submitted natively, the
+   * page reloaded with a '?' and no results ever showed), the handler
+   * was never attached and Search memory looked dead. It now binds
+   * from its own isolated step the moment this section loads, and
+   * initV11 re-calls it (no-op once bound) as a second chance. */
+  function bindAskMemoryForm() {
+    var askForm = gel('ask-memory-form');
+    if (!askForm || askForm.__rootlingBound) return;
+    askForm.__rootlingBound = true;
+    askForm.addEventListener('submit', function (ev) {
+      if (ev && ev.preventDefault) ev.preventDefault();
+      var input = gel('ask-memory-input');
+      var list = gel('ask-memory-results');
+      if (!list) return;
+      var hits = searchMemory(input ? input.value : '');
+      list.innerHTML = hits.length
+        ? hits.map(function (h) { return '<li>' + escapeHtml(h) + '</li>'; }).join('')
+        : '<li>Nothing found for that. Your pet\'s memory grows as you spend days together.</li>';
+    });
+  }
+  try {
+    if (typeof document !== 'undefined') {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+          try { bindAskMemoryForm(); } catch (e) { /* search is a help, never a need */ }
+        });
+      } else {
+        bindAskMemoryForm();
+      }
+    }
+  } catch (e) { /* initV11 below retries the bind inside the full init */ }
+
   var v11Wired = false;
   function initV11() {
     if (v11Wired) return;
@@ -1346,17 +1388,7 @@
     for (var i = 0; i < chips.length; i++) {
       chips[i].addEventListener('click', function () { sendChat(this.getAttribute('data-chat-send')); });
     }
-    var askForm = gel('ask-memory-form');
-    if (askForm) askForm.addEventListener('submit', function (ev) {
-      ev.preventDefault();
-      var input = gel('ask-memory-input');
-      var list = gel('ask-memory-results');
-      if (!list) return;
-      var hits = searchMemory(input ? input.value : '');
-      list.innerHTML = hits.length
-        ? hits.map(function (h) { return '<li>' + escapeHtml(h) + '</li>'; }).join('')
-        : '<li>Nothing found for that. Your pet\'s memory grows as you spend days together.</li>';
-    });
+    try { bindAskMemoryForm(); } catch (e) { /* already bound at section load when possible */ }
     var pt = gel('privacy-mode-toggle');
     if (pt) pt.addEventListener('change', function () {
       var acc = loadAiAccess();
@@ -1373,11 +1405,8 @@
     });
     var cn = gel('connected-connect-btn');
     if (cn) cn.addEventListener('click', function () {
-      var msg0 = gel('connected-msg');
-      if (msg0) msg0.textContent = 'Opening Google\u2026';
       callFunction('oauth-start', {}).then(function (res) { return res.json(); }).then(function (out) {
-        if (out && out.url) { window.location.href = out.url; return; }
-        if (msg0) msg0.textContent = 'Could not start the connection (' + ((out && (out.error || out.message || out.code)) || 'no link came back') + '). Try signing out and in again.';
+        if (out && out.url) window.location.href = out.url;
       }).catch(function () {
         var msg = gel('connected-msg');
         if (msg) msg.textContent = 'Could not start the connection. Try again in a bit.';
@@ -2382,12 +2411,6 @@
     var img = els.petImg;
     var stage = stageFor(state.sunshine, state.form);
     var primary = mood === 'stage' ? stage.file : moodFile(state, mood);
-    /* v15: painted species portrait (species-art.js) leads when the
-     * chosen species has one; the stage/mood SVGs stay as the fallback. */
-    var SA = window.RootlingSpeciesArt, sp = SA ? SA.speciesOf(state) : '';
-    var art = SA ? SA.src(sp, stage.id, mood) : '';
-    if (art) primary = art;
-    if (SA) SA.decorate(img, art ? sp : '', stage.id, mood);
     img.onerror = function () {
       if (img.src.indexOf(stage.file) === -1 && primary !== stage.file) {
         img.src = stage.file;
@@ -2656,10 +2679,7 @@
     var mode = state.pauseScreen || 'blank';
     if (els.quietArt) {
       els.quietArt.hidden = mode !== 'companion';
-      if (mode === 'companion') {
-        var SAq = window.RootlingSpeciesArt, spq = SAq ? SAq.speciesOf(state) : '';
-        els.quietArt.src = (SAq && SAq.src(spq, stageFor(state.sunshine, state.form).id, 'sleepy')) || (FORMS[state.form] || FORMS.plant).moods.sleepy;
-      }
+      if (mode === 'companion') els.quietArt.src = (FORMS[state.form] || FORMS.plant).moods.sleepy;
     }
     if (els.quietColour) els.quietColour.hidden = mode !== 'colour';
     if (els.quietView) els.quietView.hidden = false;
@@ -3287,8 +3307,17 @@
       var entry = { btn: btn, target: targetEl, label: label };
       listenButtons.push(entry);
       btn.addEventListener('click', function () {
-        if (speakingTarget === targetEl) { stopSpeaking(); return; }
-        speakText(targetEl.textContent, targetEl);
+        /* v15: the pet-card Listen button used to change nothing a
+         * user could SEE (sound only), which read as a dead button.
+         * The pet line itself now says what happened, in words. */
+        var isPetLine = targetEl && targetEl.id === 'pet-message';
+        if (speakingTarget === targetEl) {
+          stopSpeaking();
+          if (isPetLine) targetEl.textContent = 'My voice is off now.';
+          return;
+        }
+        var started = speakText(targetEl.textContent, targetEl);
+        if (started && isPetLine) targetEl.textContent = 'You can hear my voice now. Tap Listen again to turn it off.';
       });
       row.appendChild(btn);
       targetEl.parentNode.insertBefore(row, targetEl.nextSibling);
@@ -7183,9 +7212,7 @@
       if (img) {
         var src = 'assets/sprout-celebrate.svg';
         try {
-          var SAc = window.RootlingSpeciesArt, spc = SAc ? SAc.speciesOf(st) : '';
-          if (SAc && SAc.has(spc)) src = SAc.src(spc, 'grown', 'celebrate');
-          else if (st && st.form === 'animal') src = 'assets/creature-celebrate.svg';
+          if (st && st.form === 'animal') src = 'assets/creature-celebrate.svg';
           else if (st && st.calmMode) src = 'assets/sprout-celebrate-calm.svg';
         } catch (e) { /* keep the plant art */ }
         img.setAttribute('src', src);
@@ -9443,7 +9470,15 @@
       'notifications-card': 'support', 'learned-view': 'support',
       'memory-book': 'support', 'privacy-view': 'support', 'memory-gate': 'support',
       'changes-view': 'support', 'welcome-card': 'home',
-      'ask-card': 'home', 'fit-card': 'home', 'mood-card': 'home', 'ask-settings-card': 'support'
+      'ask-card': 'home', 'fit-card': 'home', 'mood-card': 'home', 'ask-settings-card': 'support',
+      /* v15 usability repair: the Talk-to-your-pet card joins Home
+       * (it shipped hard-hidden in v11–v14 — no code ever unhid it),
+       * and the four cards that used to repeat at the bottom of EVERY
+       * tab (connected accounts, AI access, topics, Ask Memory) live
+       * on the Settings & Support tab only, so pages open short. */
+      'chat-card': 'home',
+      'connected-card': 'support', 'ai-access-card': 'support',
+      'topics-card': 'support', 'ask-memory-card': 'support'
     };
     var VIEW_OF_HEADING = {
       'pet-heading': 'home', 'checkins-heading': 'home',
@@ -9669,6 +9704,111 @@
     if (typeof document !== 'undefined') {
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initNav);
       else initNav();
+    }
+  })();
+
+  /* ---------- Collapsible secondary cards (v15) ----------
+   * The tap-through measured tabs at 8–15 phone-screens tall. The
+   * secondary cards now start FOLDED on every fresh page load: only
+   * the heading and a real Open/Close button show, so each tab opens
+   * short and the user unfolds only what they came for. The fold is
+   * never stored. It hides the card's own children with the hidden
+   * property and remembers exactly which children it hid
+   * (data-fold-hidden), so expanding never stomps a child's own
+   * show/hide logic (the install button, the gift line, ...).
+   * View gating still owns the card as a whole; the fold owns its
+   * insides. Everything is guarded — a missing card or heading is
+   * skipped, never an error. */
+  (function () {
+    var FOLD_IDS = ['welcome-card', 'preview-card', 'fit-card', 'mood-card',
+      'adventures-card', 'daily-gift', 'install-card'];
+
+    /* The child that stays visible: the one that IS a heading, or
+     * holds one. #daily-gift has no heading — its first line ("…found
+     * something while you were away") stays up as its intro. */
+    function headingHost(card) {
+      var kids = card.children;
+      for (var i = 0; i < kids.length; i++) {
+        var t = kids[i].tagName;
+        if (t === 'H2' || t === 'H3' || t === 'H4') return kids[i];
+        if (kids[i].querySelector && kids[i].querySelector('h2, h3, h4')) return kids[i];
+      }
+      return kids.length ? kids[0] : null;
+    }
+    function findToggle(card) {
+      for (var i = 0; i < card.children.length; i++) {
+        var k = card.children[i];
+        if (k.classList && k.classList.contains('fold-toggle')) return k;
+      }
+      return null;
+    }
+    function applyFold(card, toggle) {
+      var host = headingHost(card);
+      var folded = card.getAttribute('data-folded') === '1';
+      for (var i = 0; i < card.children.length; i++) {
+        var kid = card.children[i];
+        if (kid === host || kid === toggle) continue;
+        if (folded) {
+          if (!kid.hidden) { kid.hidden = true; kid.setAttribute('data-fold-hidden', '1'); }
+        } else if (kid.getAttribute('data-fold-hidden') === '1') {
+          kid.hidden = false;
+          kid.removeAttribute('data-fold-hidden');
+        }
+      }
+      toggle.textContent = folded ? '▸ Open' : '▾ Close';
+      toggle.setAttribute('aria-expanded', folded ? 'false' : 'true');
+    }
+    function setupCard(card) {
+      if (!card) return;
+      var host = headingHost(card);
+      if (!host) return; /* nothing rendered yet — a later pass retries */
+      var toggle = findToggle(card);
+      if (!toggle) {
+        toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'btn btn-ghost fold-toggle';
+        toggle.setAttribute('aria-controls', card.id);
+        toggle.addEventListener('click', function () {
+          card.setAttribute('data-folded', card.getAttribute('data-folded') === '1' ? '0' : '1');
+          applyFold(card, toggle);
+        });
+        if (host.nextSibling) card.insertBefore(toggle, host.nextSibling);
+        else card.appendChild(toggle);
+        if (card.getAttribute('data-folded') === null) card.setAttribute('data-folded', '1');
+      }
+      applyFold(card, toggle);
+    }
+    function setupAll() {
+      for (var i = 0; i < FOLD_IDS.length; i++) {
+        try { setupCard(document.getElementById(FOLD_IDS[i])); } catch (e) { /* one bad card never blocks the rest */ }
+      }
+    }
+    function arm() {
+      setupAll();
+      /* Cards that arrive or re-render later: the welcome card is
+       * injected after adoption/trait events, and companions.js
+       * rewrites #daily-gift's insides (which carries the toggle
+       * away) — watch both spots and re-fold idempotently. */
+      try {
+        if (typeof MutationObserver !== 'undefined') {
+          var mv = document.getElementById('main-view');
+          if (mv) {
+            var mo = new MutationObserver(function () { setupAll(); });
+            mo.observe(mv, { childList: true });
+          }
+          var gift = document.getElementById('daily-gift');
+          if (gift) {
+            var go = new MutationObserver(function () { setupAll(); });
+            go.observe(gift, { childList: true });
+          }
+        }
+      } catch (e) { /* retries below still cover the common paths */ }
+      try { setTimeout(setupAll, 300); } catch (e) { /* never a need */ }
+      try { setTimeout(setupAll, 1200); } catch (e) { /* never a need */ }
+    }
+    if (typeof document !== 'undefined') {
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arm);
+      else arm();
     }
   })();
 
