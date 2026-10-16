@@ -1212,7 +1212,12 @@
       if (!jwt) throw new Error('no session');
       return fetch(SUPABASE_URL + '/functions/v1/' + name, {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + jwt, 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        /* No 'apikey' header: the functions' CORS rules allow only
+         * authorization + content-type, so sending apikey made the
+         * browser's preflight fail and every call (connect, scan, chat,
+         * disconnect) died before reaching the backend. The user's JWT
+         * in Authorization is all the gateway needs. */
+        headers: { 'Authorization': 'Bearer ' + jwt, 'Content-Type': 'application/json' },
         body: JSON.stringify(body || {})
       });
     });
@@ -1368,8 +1373,11 @@
     });
     var cn = gel('connected-connect-btn');
     if (cn) cn.addEventListener('click', function () {
+      var msg0 = gel('connected-msg');
+      if (msg0) msg0.textContent = 'Opening Google\u2026';
       callFunction('oauth-start', {}).then(function (res) { return res.json(); }).then(function (out) {
-        if (out && out.url) window.location.href = out.url;
+        if (out && out.url) { window.location.href = out.url; return; }
+        if (msg0) msg0.textContent = 'Could not start the connection (' + ((out && (out.error || out.message || out.code)) || 'no link came back') + '). Try signing out and in again.';
       }).catch(function () {
         var msg = gel('connected-msg');
         if (msg) msg.textContent = 'Could not start the connection. Try again in a bit.';
