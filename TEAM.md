@@ -26,6 +26,7 @@ A lead may add small hooks in the other lane, such as a store key, a VIEW_OF_ID 
 3. Bump `CACHE_VERSION` in `sw.js` to the next number. If the other builder already used that number, take the higher one plus 1.
 4. Add a `README.md` changelog section that starts with `## vN — ... (date, Muse|Computer)`.
 5. A new localStorage key must be added to `accounts.js` APP_KEYS and to app.js `MODULE_STORE_KEYS`, `ALL_KEYS`, and `AREA_KEYS`. The check enforces this.
+6. **Log it in `_agents/CHANNEL.md`** (required for every AI and developer). Read the latest messages before you start, then add a message at the bottom in the same commit or PR, covering what you did, results, and next steps. Changes outside the code (Supabase, Google Cloud, accounts) get a message right after you make them. The `channel-log` workflow job flags any push or PR that skips this. See the rules at the top of that file.
 
 ## Never remove or hide another lane's piece
 
