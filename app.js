@@ -19,7 +19,7 @@
    * NOT exported — it is this device's own request state, not data. */
   var MODULE_STORE_KEYS = ['rootling-appearance-v1', 'rootling-exec-v1',
     'rootling-well-v1', 'rootling-consent-v1', 'rootling-social-v1',
-    'rootling-time-v1', 'rootling-memorybook-v1', 'rootling-assistant-v1', 'rootling-fitness-v1', 'rootling-mood-v1', 'rootling-pet-art-v1'];
+    'rootling-time-v1', 'rootling-memorybook-v1', 'rootling-assistant-v1', 'rootling-fitness-v1', 'rootling-mood-v1', 'rootling-pet-art-v1', 'rootling-playground-v1'];
   /* Soft warning line, not a cap: localStorage origins are commonly
    * limited to roughly 5 MB, so at ~4 MB of stored memory the app tells
    * the user and offers an export first. Nothing is dropped at this line
@@ -1233,6 +1233,51 @@
     });
   }
 
+  /* v17 (connect honesty): a session that is missing or within a
+   * minute of lapsing is refreshed BEFORE oauth-start, so the
+   * connect tap fails honestly instead of dying on a stale token.
+   * Resolves true when a usable session exists afterwards. */
+  function ensureFreshSession() {
+    if (!sbClient) return Promise.resolve(false);
+    return sbClient.auth.getSession().then(function (res) {
+      var s = res && res.data ? res.data.session : null;
+      if (s && s.expires_at && (s.expires_at * 1000 - Date.now() > 60000)) return true;
+      return sbClient.auth.refreshSession().then(function (r2) {
+        return !!(r2 && r2.data && r2.data.session);
+      }).catch(function () { return false; });
+    }).catch(function () { return false; });
+  }
+
+  /* v17: Google refuses sign-in inside embedded in-app browsers
+   * (disallowed_useragent) — detect them and route the user to a
+   * real browser instead of redirecting into a dead end. */
+  function inEmbeddedBrowser() {
+    var ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+    return /FBAN|FBAV|FB_IAB|Instagram|Line\/|Twitter|Snapchat|TikTok|; wv\)/.test(ua);
+  }
+  function showCopyLinkButton() {
+    var msg = gel('connected-msg');
+    if (!msg || !msg.parentElement || gel('connected-copy-link-btn')) return;
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.id = 'connected-copy-link-btn';
+    b.className = 'btn btn-soft';
+    b.textContent = 'Copy link';
+    b.addEventListener('click', function () {
+      var url = window.location.origin + window.location.pathname;
+      var m2 = gel('connected-msg');
+      function fallback() { if (m2) m2.textContent = 'Copy this address into Chrome: ' + url; }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(function () {
+            if (m2) m2.textContent = 'Link copied. Paste it into Chrome to open Rootling there.';
+          }, fallback);
+        } else fallback();
+      } catch (e) { fallback(); }
+    });
+    msg.parentElement.appendChild(b);
+  }
+
   function runEmailCheck() {
     if (!connectedConfigured()) return Promise.resolve('Email is not set up yet. Your pet works fully without it — this trick needs the connected layer, in Settings & Support.');
     if (!sbUser) return Promise.resolve('First, sign in — the Connected accounts card is in Settings & Support. Signing in is only your name badge; it does not read email.');
@@ -1408,11 +1453,46 @@
     });
     var cn = gel('connected-connect-btn');
     if (cn) cn.addEventListener('click', function () {
-      callFunction('oauth-start', {}).then(function (res) { return res.json(); }).then(function (out) {
-        if (out && out.url) window.location.href = out.url;
-      }).catch(function () {
-        var msg = gel('connected-msg');
-        if (msg) msg.textContent = 'Could not start the connection. Try again in a bit.';
+      var msg = gel('connected-msg');
+      /* v17: Google blocks sign-in inside embedded in-app browsers —
+       * never redirect there; route the user to a real browser. */
+      if (inEmbeddedBrowser()) {
+        if (msg) msg.textContent = 'Google blocks sign-in inside the Facebook/Instagram browser. Tap ⋮ → Open in Chrome, then connect there.';
+        showCopyLinkButton();
+        return;
+      }
+      if (msg) msg.textContent = 'Opening Google…';
+      ensureFreshSession().then(function (fresh) {
+        if (!fresh) {
+          if (msg) msg.textContent = 'Your sign-in expired. Sign in again on this card, then tap Connect.';
+          renderConnected();
+          return null;
+        }
+        return callFunction('oauth-start', {}).then(function (res) {
+          return res.json().then(function (out) { return { res: res, out: out }; },
+            function () { return { res: res, out: null }; });
+        }).then(function (r) {
+          if (!r) return;
+          if (!r.res.ok) {
+            var detail = '';
+            if (r.out) {
+              if (typeof r.out.error === 'string') detail = r.out.error;
+              else if (r.out.error && r.out.error.message) detail = r.out.error.message;
+              else if (r.out.message) detail = r.out.message;
+            }
+            if (msg) msg.textContent = 'Connect failed (HTTP ' + r.res.status + ')' + (detail ? ' ' + detail : '');
+            return;
+          }
+          if (r.out && r.out.url) { window.location.href = r.out.url; return; }
+          if (msg) msg.textContent = 'Google link did not come back. Try again.';
+        });
+      }).catch(function (err) {
+        if (err && err.message === 'no session') {
+          if (msg) msg.textContent = 'Your sign-in expired. Sign in again on this card, then tap Connect.';
+          renderConnected();
+          return;
+        }
+        if (msg) msg.textContent = "Could not reach Rootling's server (network/CORS).";
       });
     });
     /* Email + password sign-in, sign-up, and reset (v12). */
@@ -1770,6 +1850,17 @@
       }
       moduleStores[key] = value;
     });
+    /* Playground saves get a real shape check before any restore: the
+     * host adapter owns the validator (it mirrors the module's own save
+     * rules). An invalid playground section refuses the whole import
+     * here — during parsing, before a single key is written — so a bad
+     * backup can never reset good game data. */
+    var pgValue = moduleStores['rootling-playground-v1'];
+    if (pgValue !== undefined && typeof window !== 'undefined' && window.RootlingPlaygroundHost
+        && typeof window.RootlingPlaygroundHost.validateStore === 'function'
+        && !window.RootlingPlaygroundHost.validateStore(pgValue)) {
+      throw new Error('That Rootling memory backup has an unreadable playground section. Nothing was changed.');
+    }
     return { appState: appState, notifications: notifications || null, moduleStores: moduleStores, exportedAt: data.exportedAt || '' };
   }
 
@@ -3155,6 +3246,7 @@
     stageFor: stageFor,
     stagesFor: stagesFor,
     petMood: petMood,
+    moodFile: moodFile,
     typesDone: typesDone,
     todayKey: todayKey,
     freshLearning: freshLearning,
@@ -3542,7 +3634,7 @@
       'rootling-persist-requested-v1', 'rootling-appearance-v1',
       'rootling-exec-v1', 'rootling-well-v1', 'rootling-social-v1',
       'rootling-time-v1', 'rootling-memorybook-v1', 'rootling-assistant-v1',
-      'rootling-assistant-secrets-v1', 'rootling-fitness-v1', 'rootling-mood-v1', 'rootling-pet-art-v1', CONSENT_KEY];
+      'rootling-assistant-secrets-v1', 'rootling-fitness-v1', 'rootling-mood-v1', 'rootling-pet-art-v1', 'rootling-playground-v1', CONSENT_KEY];
     var AREA_KEYS = [
       { key: 'rootling-exec-v1', label: 'Delete tasks and focus data' },
       { key: 'rootling-well-v1', label: 'Delete routines and wellbeing data' },
@@ -3554,7 +3646,8 @@
       { key: 'rootling-assistant-secrets-v1', label: 'Delete Ask your pet keys' },
       { key: 'rootling-fitness-v1', label: 'Delete steps, workouts, and fitness goals' },
       { key: 'rootling-mood-v1', label: 'Delete mood care data (mood checks, lifts, good things)' },
-      { key: 'rootling-pet-art-v1', label: 'Delete my pet drawings' }
+      { key: 'rootling-pet-art-v1', label: 'Delete my pet drawings' },
+      { key: 'rootling-playground-v1', label: 'Delete playground games, decorations, and your shared home' }
     ];
     var wizardStep = 1;
     var privacyReturn = null; /* 'adopt' | 'main' | 'wizard' */
@@ -9490,7 +9583,7 @@
     var VIEW_OF_ID = {
       'help-panel': 'home', 'stuck-offer': 'home', 'today-card': 'home', 'preview-card': 'home',
       'exec-view': 'focus', 'grounding-card': 'focus',
-      'time-view': 'activities', 'adventures-card': 'activities', 'pet-art-card': 'activities',
+      'time-view': 'activities', 'adventures-card': 'activities', 'pet-art-card': 'activities', 'playground-card': 'activities',
       'companions-view': 'companion', 'change-main-confirm': 'companion', 'daily-gift': 'companion',
       'train-view': 'companion',
       'support-open-row': 'support', 'safety-view': 'support', 'install-card': 'support',

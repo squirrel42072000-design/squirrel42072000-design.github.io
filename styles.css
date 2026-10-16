@@ -634,3 +634,20 @@ body.calm .pet-fx svg,body.well-still .pet-fx svg{animation:none !important}
 body.calm .art-breath-ring,html.calm-motion .art-breath-ring{transition:none;transform:scale(.9)}
 body.calm .art-sprint-fill,html.calm-motion .art-sprint-fill{transition:none}
 @media (prefers-reduced-motion:reduce){.art-breath-ring,.art-sprint-fill{transition:none}}
+
+/* v17: Pet Playground (package module, shadow-DOM isolated). The host
+   themes it through the module's own CSS variables, mapped from the
+   app theme variables so light / dark / high-contrast appearances all
+   carry in. Focus outlines inside the shadow tree are the module's. */
+#pet-playground {
+  --playground-text: var(--ink);
+  --playground-bg: var(--paper);
+  --playground-border: var(--leaf);
+}
+.playground-pet { position: relative; display: inline-block; }
+.playground-pet img { width: 96px; height: 96px; object-fit: contain; }
+.playground-recovery {
+  border: 2px solid var(--sun); border-radius: 14px;
+  padding: 12px 14px; margin-top: 10px; background: var(--sun-soft);
+}
+.playground-recovery p { margin: 0 0 8px; }

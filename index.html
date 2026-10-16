@@ -345,6 +345,16 @@
       <label class="check-row"><input type="checkbox" id="pet-art-sync"> Back up my drawings to my connected account (off by default, never in Privacy Mode)</label>
     </section>
 
+    <!-- Play Together (v17): the Pet Playground package module
+         (pet-playground.js, shadow-DOM isolated) mounts into
+         #pet-playground via playground-host.js. Five games the user
+         plays WITH their pet. Spec: build-docs/SPEC-PET-PLAYGROUND.md. -->
+    <section class="card" id="playground-card" aria-labelledby="playground-heading">
+      <h3 id="playground-heading">Play Together</h3>
+      <p class="q">Short games you and your pet play together. No timer, no penalties — stopping is always okay.</p>
+      <div id="pet-playground"></div>
+    </section>
+
     <!-- Your collection (2026-10-15): every companion you own. The main
          companion greets you on Home and speaks for your check-ins. -->
     <section class="card" id="companions-view" aria-labelledby="companions-heading">
@@ -1780,5 +1790,6 @@
 <script src="fitness.js"></script>
 <script src="mood.js"></script>
 <script src="assistant.js"></script>
+<script src="playground-host.js"></script>
 </body>
 </html>
