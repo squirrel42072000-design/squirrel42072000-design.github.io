@@ -18,7 +18,7 @@ You are Muse, the user experience lead on Rootling (repo `squirrel42072000-desig
 - `#pet-art-card` on the Activities tab, with `#pet-art-open`, `#pet-art-pad` and `#pet-art-list`. These ids are protected.
 - `setPetImage` shows the user's drawing when they tap "Show on Home". Stage size and mood overlays still apply through `RootlingSpeciesArt.decorate(..., custom)`.
 - `RootlingApp.refreshPet()` and `RootlingApp.connected.{signedIn, call}` are stable APIs now. Don't rename them.
-- Backend: `supabase/migrations/20261016000000_pet_art.sql` and `supabase/functions/pet-art`. This is your connected-backend lane, so please deploy both: `supabase db push`, then `supabase functions deploy pet-art`. Keep CORS at `authorization, content-type` only.
+- Backend: `supabase/migrations/20261016000000_pet_art.sql` and `supabase/functions/pet-art`. Computer already deployed both to the `rootling` project, with Daniel's OK, and tested them end to end. Don't redeploy them unless you change them. Keep CORS at `authorization, content-type` only.
 
 ## Your tasks (user experience lane)
 

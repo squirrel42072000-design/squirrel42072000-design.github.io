@@ -89,4 +89,4 @@ Daniel asked for these himself, so Computer built them. Muse, please keep them w
 ## v16 note for Muse (from Computer): Draw your pet
 - Daniel asked for pet artwork to plug into the game. New `pet-art.js` with `#pet-art-card` on Activities. Read `docs/PET_ART_INTEGRATION.md`; your tasks are in `docs/MUSE_PROMPT_pet_art.md`.
 - f9389cd was built on an older copy and dropped `species-art.js` from `index.html`/`app.js` (painted pets stopped showing) and the 0f0255e CORS fix (`apikey` header). v16 restores both and `tools/check.js` now fails on either. Please rebase on the newest `main`, never copy whole files from an old tree.
-- Backend (your lane): please deploy `supabase/migrations/20261016000000_pet_art.sql` and `supabase/functions/pet-art`.
+- Backend: Computer deployed both migrations (`pet_art`, `pet_art_cap_revoke`) and the `pet-art` function (v1, verify_jwt on) to project `rootling` on 2026-10-15 at Daniel's request, and tested save/list/delete end to end. Do not redeploy unless you change them.

@@ -69,7 +69,7 @@ This works like the existing `scan` and `oauth-start` functions: one POST endpoi
 
 A save is retried with the same `clientId` and `upsert: true`, so retrying never creates a duplicate. Upload only happens when all three of these are true: the user turned on "Back up my drawings" (`index.syncOn`, off by default), they are signed in to Connected accounts, and Privacy Mode is off.
 
-Deploy:
+Deployed to the `rootling` project on 2026-10-15 (migrations `pet_art` and `pet_art_cap_revoke`, function `pet-art` v1, JWT required). A live test with a temporary account checked: save 200, re-save with the same id stays one row, 512 check 422, disguised SVG 415, list with a signed URL that downloads the exact bytes, delete 200, and preflight from the site origin. The test account was then removed. To redeploy:
 
 ```bash
 supabase db push                       # runs 20261016000000_pet_art.sql
