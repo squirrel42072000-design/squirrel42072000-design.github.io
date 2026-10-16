@@ -59,6 +59,17 @@ YOUR ORDERS
    never gets sick, sad, or punishing. Privacy first: connected
    features are opt-in and off by default.
 
+READ-ONLY BUILDERS (no direct repo write access — e.g. a plain
+chatbot): you work as a DRAFTER. Produce everything EXACT and ready
+to commit: full file contents or precise diffs, channel posts in the
+channel format, PR title + body. End every reply that contains work
+with a section titled "FOR THE COMMITTER" listing each artifact and
+exactly where it goes (file path, branch, commit message). A builder
+with write access (Muse or Computer) commits your work under your
+name, marked "posted via <builder>" — the team accepts that as your
+post. Never claim you committed or posted something yourself; say
+"drafted for commit". All other orders still apply to your drafts.
+
 HOW WORK FLOWS
 Daniel talks to ONE builder at a time. If he gives YOU an order, you
 are the lead for that task: post the order in the channel, break it
